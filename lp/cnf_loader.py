@@ -4,7 +4,7 @@ class CNFLoader():
         self.n_vars = None
         self.m_clauses = None
         self.clauses = None
-        if file:
+        if filename:
             self._load_from_file(filename)
 
 

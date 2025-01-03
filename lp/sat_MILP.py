@@ -81,7 +81,7 @@ class SATasLP:
         return result, witness
 
     def create_lp(self, filename=None):
-        self.load(filename)
+        self.cnf_handler.load(filename)
         self._init_objects()
         self._create_optimization()
 
