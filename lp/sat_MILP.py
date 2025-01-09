@@ -77,8 +77,22 @@ class SATasLP:
         self.solver.Solve()
         result = self.solver.Objective().Value()
         witness = self.round([v.solution_value() for v in self.vars])
+        betas = [v.solution_value() for v in self.betas]
         
-        return result, witness
+        return result, witness, betas
+
+    def verify(self, witness):
+        clauses = self.clauses()
+        witness = np.array([-1 if xi == 0 else 1 for xi in witness])
+        for c in clauses:
+            abs_c = np.abs(c) 
+            idx = abs_c - 1
+            sgn = c/abs_c
+            res = np.max(witness[idx]*sgn)
+            if res != 1:
+                return False
+
+        return True
 
     def create_lp(self, filename=None):
         self.cnf_handler.load(filename)
@@ -92,7 +106,8 @@ if __name__ == "__main__":
     # filename = "cnfs/cnf_sat.txt"
     filename = "cnfs/uf20-018.cnf"
     lp_obj.create_lp(filename)
-    res, witness = lp_obj.solve()
+    res, witness, betas = lp_obj.solve()
+    print(betas)
     witness_str = {lp_obj.vars[i].name(): witness[i] for i in range(len(lp_obj.vars))}
     print(witness_str)
     print("----------------")
