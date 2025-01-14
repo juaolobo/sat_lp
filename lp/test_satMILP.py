@@ -37,15 +37,12 @@ def create_parser():
 
 def _worker(cmb):
     
-    all_vars = [i for i in range(1, 21)]
-
     lp_obj = SATasLP(relaxed_vars=cmb)
     lp_obj.create_lp(filename)
     res, witness = lp_obj.solve()
     ok = lp_obj.verify(witness)
-    fixed = tuple(set(all_vars) - set(cmb))
     n_relaxed = len(cmb)
-    row = [res, ok, witness, cmb, fixed, n_relaxed]
+    row = [res, ok, witness, cmb, n_relaxed]
 
     return row
 
@@ -66,11 +63,11 @@ if __name__ == "__main__":
 
     with open(f"experiments/{no_ext}-experiments.csv", "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
-        columns = ['result','is_solution','witness','relaxed_vars', 'fixed_vars', 'n_relaxed']
+        columns = ['result','is_solution','witness','relaxed_vars', 'n_relaxed']
         writer.writerow(columns)
         all_vars = range(1, n_vars+1)
         for i in tqdm(all_vars):
-            cmbs = [c for c in combinations(range(1, n_vars+1), i)]
+            cmbs = [c for c in combinations(all_vars, i)]
             print(f"Testing combinations for (20 {i})")
             with mp.Pool(n_threads) as p:
                 chunksize = round(len(cmbs)/n_threads) if n_threads else round(len(cmbs)/os.cpu_count())
