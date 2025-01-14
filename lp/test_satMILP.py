@@ -26,7 +26,7 @@ def create_parser():
         help="Use this flag to run the program in multiple threads."
     )
     parser.add_argument(
-        "-n", 
+        "-t", 
         "--n_threads", 
         type=int, 
         default=None, 
@@ -63,19 +63,18 @@ if __name__ == "__main__":
 
     with open(f"experiments/{no_ext}-experiments.csv", "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
+
         columns = ['result','is_solution','witness','relaxed_vars', 'n_relaxed']
         writer.writerow(columns)
+
         all_vars = range(1, n_vars+1)
         for i in tqdm(all_vars):
             cmbs = [c for c in combinations(all_vars, i)]
             print(f"Testing combinations for (20 {i})")
+
             with mp.Pool(n_threads) as p:
                 chunksize = round(len(cmbs)/n_threads) if n_threads else round(len(cmbs)/os.cpu_count())
                 csv_list = p.map(_worker, cmbs, chunksize=chunksize)
+
                 for csv_values in csv_list:
                     writer.writerow(csv_values)
-
-
-
-
-            
