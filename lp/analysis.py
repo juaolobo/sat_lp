@@ -4,11 +4,17 @@ from math import comb
 from matplotlib import pyplot as plt
 import sys
 
+def addlabels(x,y):
+    delta = 2e-2
+    props = dict(boxstyle='round', facecolor='beige', alpha=0.5)
+    for i in range(len(x)):
+        plt.text(i, y[i] + delta, round(y[i], 2), ha = 'center', parse_math=True, bbox=props)
+
 if len(sys.argv) < 2:
     exit(0)
 
 filename = f"experiments/{sys.argv[1]}-experiments.csv"
-
+figsize=(13, 8)
 df = pd.read_csv(filename)
 cvg = df[df["is_solution"] == True]
 ncvg = df[df["is_solution"] == False]
@@ -21,9 +27,10 @@ ranked_vars["pct"] = ranked_vars_pct
 
 df_vars_ncvg = ranked_vars
 
-fig = plt.figure()
-df_vars_ncvg["pct"].plot(kind='bar')
-plt.savefig(f"figs/{sys.argv[1]}non_convergent_vars.png")
+fig = plt.figure(figsize=figsize)
+df_vars_ncvg["pct"].plot(kind='bar', title='Percentage of times that variables appeared in divergent solution')
+addlabels(df_vars_ncvg["pct"].index, df_vars_ncvg["pct"].values)
+plt.savefig(f"figs/{sys.argv[1]}-non_convergent_vars.png")
 
 relax_len = relaxed_vars.apply(len)
 ranked_len = pd.DataFrame(relax_len.value_counts())
@@ -37,14 +44,13 @@ df_len_ncvg = (ranked_len
                 .sort_values(by=["pct", "relaxed_vars"])
                 .drop(columns="comb_total"))
 
-fig = plt.figure()
-df_len_ncvg["pct"].plot(kind='bar', title="num_relaxed_vars")
-plt.savefig(f"figs/{sys.argv[1]}non_convergent_len.png")
+fig = plt.figure(figsize=figsize)
+df_len_ncvg["pct"].plot(kind='bar', title="Number of relaxed variables in divergent solution")
+addlabels(df_len_ncvg["pct"].index, df_len_ncvg["pct"].values)
+plt.savefig(f"figs/{sys.argv[1]}-non_convergent_len.png")
+
 breakpoint()
 
-witness = ncvg["witness"].apply(literal_eval)
-
-results = ncvg["result"].value_counts()
 
 
 
