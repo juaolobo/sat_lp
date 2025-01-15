@@ -11,12 +11,14 @@ def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-f", 
-        "--file", 
+        "--file",
+        required=True,
         type=str
     )
     parser.add_argument(
         "-n", 
         "--n_vars", 
+        required=True,
         type=int
     )
     parser.add_argument(
@@ -26,11 +28,11 @@ def create_parser():
         help="Use this flag to run the program in multiple threads."
     )
     parser.add_argument(
-        "-t", 
-        "--n_threads", 
+        "-np", 
+        "--n_processes", 
         type=int, 
         default=None, 
-        help="If --run_in_parallel is active and n_threads=None, the program will use all available logical CPUs. Default is set to 'None'."
+        help="If --run_in_parallel is active and n_processes=None, the program will use all available logical CPUs. Default is set to 'None'."
     )
 
     return parser
@@ -58,7 +60,9 @@ if __name__ == "__main__":
 
     filename = f"cnfs/{args.file}"
     no_ext = args.file[:-4]
-    n_threads = args.n_threads if args.run_in_parallel else 1
+    n_processes = args.n_processes if args.run_in_parallel else 1
+    if not n_processes:
+        n_processes = os.cpu_count()
     n_vars = args.n_vars
 
     with open(f"experiments/{no_ext}-experiments.csv", "w") as f:
@@ -71,10 +75,10 @@ if __name__ == "__main__":
         for i in tqdm(all_vars):
             cmbs = [c for c in combinations(all_vars, i)]
             print(f"Testing combinations for (20 {i})")
+            with mp.Pool(n_processes) as p:
+                chunksize = round(len(cmbs)/n_processes)
+                chunksize = chunksize if chunksize > 0 else len(cmbs)
 
-            with mp.Pool(n_threads) as p:
-                chunksize = round(len(cmbs)/n_threads) if n_threads else round(len(cmbs)/os.cpu_count())
                 csv_list = p.map(_worker, cmbs, chunksize=chunksize)
-
                 for csv_values in csv_list:
                     writer.writerow(csv_values)
