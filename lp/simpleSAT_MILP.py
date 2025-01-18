@@ -55,3 +55,5 @@ if __name__ == "__main__":
     result = lp_obj.solver.Objective().Value()
     print(result)
     print("----------------")
+    sat_clauses = lp_obj.verify_partial(witness)
+    print(sat_clauses, len(sat_clauses))

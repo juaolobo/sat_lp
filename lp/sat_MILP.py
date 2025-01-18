@@ -58,14 +58,16 @@ if __name__ == "__main__":
     # filename = "cnfs/cnf_sat.txt"
     filename = "cnfs/uf20-018.cnf"
     lp_obj.create_lp(filename)
-    res, witness = lp_obj.solve()
 
+    res, witness = lp_obj.solve()
     betas = [v.solution_value() for v in lp_obj.betas]
 
     print(betas)
+
     witness_str = {lp_obj.vars[i].name(): witness[i] for i in range(len(lp_obj.vars))}
     print(witness_str)
     print("----------------")
+    
     result = lp_obj.solver.Objective().Value()
     print(result)
     print("----------------")

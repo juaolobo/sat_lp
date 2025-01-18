@@ -24,7 +24,9 @@ class CNFLoader():
         self.clauses = clauses
 
     def load(self, filename):
-        try:
-            self._load_from_file(filename)
-        except FileError:
-            print("Something went wrong loading the file. Make sure it is in DIMCAS formats.")
+        if (self.clauses == None) or (filename != self.filename):
+            try:
+                self._load_from_file(filename)
+            except FileError:
+                print("Something went wrong loading the file. Make sure it is in DIMCAS formats.")
+
