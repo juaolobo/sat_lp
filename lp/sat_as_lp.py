@@ -97,6 +97,8 @@ class SATasLP(ABC):
     def load_cnf(self, filename):
         self.cnf_handler.load(filename)
 
-    def create_lp(self):
+    def create_lp(self, filename=None):
+        if filename:
+            self.load_cnf(filename)
         self._init_objects()
         self._create_optimization()

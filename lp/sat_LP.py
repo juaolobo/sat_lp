@@ -8,7 +8,6 @@ class SATasLPWithFixing(SATasLP):
     def __init__(self, filename=None, fixing={}):
         self.fixing = fixing
         super().__init__(filename, None)
-        self.relaxed_vars = [i for i in range(1, self.n_vars()+1) if i not in self.fixing.keys()]
 
     def _init_objects(self):
 
@@ -37,18 +36,26 @@ class SATasLPWithFixing(SATasLP):
             self.solver.Add(self.solver.Sum(coefs) >= res[i])
 
     def _create_optimization(self):
-        # no optimization func
+        # no optimization function
         self.solver.Maximize(1)
 
-    def create_lp(self):
+    def create_lp(self, filename=None):
+
+        if filename:
+            self.load_cnf(filename)
+
+        self.relaxed_vars = [
+            i for i in range(1, self.n_vars()+1) 
+                if i not in self.fixing.keys()
+            ]
         self._init_objects()
         self._create_optimization()
 
 if __name__ == "__main__":
 
-    fixing = {1: 0, 20: 1}
+    fixing = {5: 1, 9: 0, 1: 0}
     # filename = "cnfs/cnf_sat.txt"
-    filename = "cnfs/uf20-018.cnf"
+    filename = "cnfs/uf20-0999.cnf"
     lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
     # filename = "cnfs/uf20-0999.cnf"
     lp_obj.create_lp()
