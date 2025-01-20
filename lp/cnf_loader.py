@@ -11,7 +11,9 @@ class CNFLoader():
     def _load_from_file(self, filename):
 
         with open(filename) as f:
-            cnf_data = [line.rstrip() for line in f if line != '\n']
+            # eliminate comments, last lines and empty lines
+            ignore_line = ['0', '%', 'c', '\n']
+            cnf_data = [line.rstrip() for line in f if line[0] not in ignore_line]
             m_clauses = int(cnf_data[0].split()[-1])
             n_variables = int(cnf_data[0].split()[-2])
             clauses = [
