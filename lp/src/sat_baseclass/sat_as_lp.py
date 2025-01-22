@@ -44,8 +44,8 @@ class SATasLP(ABC):
     def solve(self):
         s = self.solver.Solve()
 
-        if s == 2:
-            print("UNFEASIBLE")
+        if s == self.solver.INFEASIBLE:
+            print("INFEASIBLE")
             self.solver.Clear()
             return s, [], []
 
