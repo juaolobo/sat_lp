@@ -1,5 +1,6 @@
+from cnf_loader.cnf_loader import CNFLoader
+
 from ortools.linear_solver import pywraplp
-from cnf_loader import CNFLoader
 import numpy as np
 from abc import ABC, abstractmethod
 

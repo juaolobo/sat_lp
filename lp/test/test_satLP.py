@@ -35,7 +35,27 @@ def create_parser():
         type=int
     )
 
+    parser.add_argument(
+        "-np", 
+        "--n_processes", 
+        type=int, 
+        default=None, 
+        help="If --run_in_parallel is active and n_processes=None, the program will use all available logical CPUs. Default is set to 'None'."
+    )
+
+
     return parser
+
+def _worker(cmb):
+    ok = 0
+    fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
+    lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
+    lp_obj.create_lp()
+    status, res, witness = lp_obj.solve()
+    if status != 2:
+        ok = lp_obj.verify(witness)
+        if ok:
+            print(cmb, fixing, ok)
 
 if __name__ == "__main__":
 
@@ -47,6 +67,10 @@ if __name__ == "__main__":
 
     args = cmd_parser.parse_args()
 
+    n_processes = args.n_processes
+    if not n_processes:
+        n_processes = os.cpu_count()
+
     filename = args.file
     solution_file = args.solution_file
     no_ext = args.file[:-4]
@@ -57,14 +81,6 @@ if __name__ == "__main__":
         solution = [int(xi) for xi in f.read().split()[1:-1]]
 
     combs = combinations(solution, n_fixed_vars)
-    
-    ok = 0
-    for i, cmb in tqdm(enumerate(combs)):
-        fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
-        lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
-        lp_obj.create_lp()
-        status, res, witness = lp_obj.solve()
-        if status != 2:
-            ok = lp_obj.verify(witness)
-            if ok:
-                print(cmb, fixing, ok)
+
+    with mp.Pool(n_processes) as p:
+        p.map(_worker, combs)
