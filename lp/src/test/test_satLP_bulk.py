@@ -28,12 +28,6 @@ def create_parser():
         required=True,
         type=int
     )
-    parser.add_argument(
-        "-nf", 
-        "--n_fixed_vars", 
-        required=True,
-        type=int
-    )
 
     parser.add_argument(
         "-np", 
@@ -49,14 +43,16 @@ def create_parser():
 def _worker(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
+    n_fixed = len(fixing)
     lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
     if status != 2:
         ok = lp_obj.verify(witness)
-        if ok:
-            print(fixing, witness)
-    return ok
+
+    row = [res, ok, witness, n_fixed, fixing]
+    
+    return row
 
 if __name__ == "__main__":
 
@@ -74,14 +70,27 @@ if __name__ == "__main__":
 
     filename = args.file
     solution_file = args.solution_file
-    no_ext = args.file[:-4]
+    no_ext = args.file.split("/")[-1][:-4]
     n_vars = args.n_vars
     n_fixed_vars = args.n_fixed_vars
 
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]
 
-    combs = combinations(solution, n_fixed_vars)
+    with open(f"../experiments/{no_ext}-experiments.csv", "w") as f:
+        writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
-    with mp.Pool(n_processes) as p:
-        oks = p.map(_worker, combs)
+        columns = ['result','is_solution','witness', 'n_fixed', 'fixing']
+        writer.writerow(columns)
+
+        all_vars = range(1, n_vars+1)
+        for i in tqdm(all_vars):
+            cmbs = [c for c in combinations(solution, i)]
+            print(f"Testing combinations for (20 {i})")
+            with mp.Pool(n_processes) as p:
+                chunksize = round(len(cmbs)/n_processes)
+                chunksize = chunksize if chunksize > 0 else len(cmbs)
+
+                csv_list = p.map(_worker, cmbs, chunksize=chunksize)
+                for csv_values in csv_list:
+                    writer.writerow(csv_values)
