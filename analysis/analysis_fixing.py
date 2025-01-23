@@ -29,7 +29,7 @@ ranked_vars["pct"] = ranked_vars_pct
 df_vars_ncvg = ranked_vars
 
 fig = plt.figure(figsize=figsize)
-df_vars_ncvg["pct"].plot(kind='bar', title='Percentage of times that variables appeared in divergent solution')
+df_vars_ncvg["pct"].plot(kind='bar', title='Percentage of times that fixing variables lead in divergent solution')
 addlabels(df_vars_ncvg["pct"].index, df_vars_ncvg["pct"].values)
 plt.savefig(f"figs/{sys.argv[1]}-non_convergent_vars.png")
 
@@ -37,17 +37,16 @@ fix_len = fixed_vars.apply(len)
 ranked_len = pd.DataFrame(fix_len.value_counts())
 
 max_comb = max(ranked_len.index)
+max_comb = 20
 ranked_len["comb_total"] = [comb(max_comb, i) for i in ranked_len["count"].index]
 ranked_len_pct = ranked_len["count"]/ranked_len["comb_total"]
 ranked_len["pct"] = ranked_len_pct
-
-breakpoint()
 df_len_ncvg = (ranked_len
-                .sort_values(by=["pct", "fixed_vars"])
+                .sort_values(by=["pct", "fixing"])
                 .drop(columns="comb_total"))
 
 fig = plt.figure(figsize=figsize)
-df_len_ncvg["pct"].plot(kind='bar', title="Number of relaxed variables in divergent solution")
+df_len_ncvg["pct"].plot(kind='bar', title="Number of fixed variables in divergent solution")
 addlabels(df_len_ncvg["pct"].index, df_len_ncvg["pct"].values)
 plt.savefig(f"figs/{sys.argv[1]}-non_convergent_len.png")
 
