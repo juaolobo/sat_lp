@@ -1,4 +1,4 @@
-from sat_baseclass.sat_as_lp import SATasLP
+from satlp.sat_baseclass.sat_as_lp import SATasLP
 
 from ortools.linear_solver import pywraplp
 import numpy as np

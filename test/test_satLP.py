@@ -1,4 +1,4 @@
-from lp_formulations.sat_LP import SATasLPWithFixing, SATasLPOriginal
+from .lp_formulations.sat_LP import SATasLPWithFixing, SATasLPOriginal
 from tqdm import tqdm
 from itertools import combinations
 import csv

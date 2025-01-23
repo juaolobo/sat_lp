@@ -1,4 +1,4 @@
-from cnf_loader.cnf_loader import CNFLoader
+from satlp import CNFLoader
 
 from ortools.linear_solver import pywraplp
 import numpy as np

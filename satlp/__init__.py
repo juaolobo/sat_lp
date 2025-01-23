@@ -1,9 +1,8 @@
-# from .cnf_loader import CNFLoader
-# from sat_baseclass import SATasLP
-# from lp_formulations import (
-#     SATasLPOriginal,
-#     SATasLPWithFixing,
-#     SATasMILP,
-#     SATasMILPSimple
-# )
-
+from satlp.cnf_loader import CNFLoader
+from satlp.sat_baseclass import SATasLP
+from satlp.lp_formulations import (
+    SATasLPOriginal,
+    SATasLPWithFixing,
+    SATasMILP,
+    SATasMILPSimple
+)

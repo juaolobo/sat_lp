@@ -1,1 +1,1 @@
-from cnf_loader import CNFLoader
+from satlp.cnf_loader.cnf_loader import CNFLoader
