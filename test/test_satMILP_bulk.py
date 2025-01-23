@@ -1,4 +1,4 @@
-from lp_formulations import SATasMILPSimple
+from satlp.lp_formulations import SATasMILPSimple
 from tqdm import tqdm
 from itertools import combinations
 import csv

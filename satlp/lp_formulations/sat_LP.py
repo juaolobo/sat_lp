@@ -1,5 +1,4 @@
 from sat_baseclass.sat_as_lp import SATasLP
-from cnf_loader.cnf_loader import CNFLoader
 
 from ortools.linear_solver import pywraplp
 import numpy as np
