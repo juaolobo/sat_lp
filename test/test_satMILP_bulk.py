@@ -39,12 +39,16 @@ def create_parser():
 
 def _worker(cmb):
     
-    lp_obj = SATasLP(relaxed_vars=cmb)
-    lp_obj.create_lp(filename)
-    res, witness = lp_obj.solve()
-    ok = lp_obj.verify(witness)
+    lp_obj = SATasMILPSimple(relaxed_vars=cmb)
     n_relaxed = len(cmb)
-    row = [res, ok, witness, cmb, n_relaxed]
+    lp_obj.create_lp(filename)
+    s, res, witness = lp_obj.solve()
+    if s == lp_obj.solver.INFEASIBLE:
+        row = ["INFEASIBLE", False, [], cmb, n_relaxed]
+
+    else:
+        ok = lp_obj.verify(witness)
+        row = [res, ok, witness, cmb, n_relaxed]
 
     return row
 
@@ -65,7 +69,7 @@ if __name__ == "__main__":
         n_processes = os.cpu_count()
     n_vars = args.n_vars
 
-    with open(f"experiments/{no_ext}-experiments.csv", "w") as f:
+    with open(f"experiments/{no_ext}-milp-simple.csv", "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
         columns = ['result','is_solution','witness','relaxed_vars', 'n_relaxed']

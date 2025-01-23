@@ -47,10 +47,13 @@ def _worker(cmb):
     lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
-    if status != 2:
-        ok = lp_obj.verify(witness)
 
-    row = [res, ok, witness, n_fixed, fixing]
+    if s == lp_obj.solver.INFEASIBLE:
+        row = ["INFEASIBLE", False, [], n_fixed, fixing]
+
+    else:
+        ok = lp_obj.verify(witness)
+        row = [res, ok, witness, n_fixed, fixing]
     
     return row
 
@@ -76,7 +79,7 @@ if __name__ == "__main__":
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]
 
-    with open(f"../experiments/{no_ext}-experiments.csv", "w") as f:
+    with open(f"../experiments/{no_ext}-with-fixing.csv", "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
         columns = ['result','is_solution','witness', 'n_fixed', 'fixing']
