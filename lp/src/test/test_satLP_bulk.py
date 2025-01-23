@@ -72,7 +72,6 @@ if __name__ == "__main__":
     solution_file = args.solution_file
     no_ext = args.file.split("/")[-1][:-4]
     n_vars = args.n_vars
-    n_fixed_vars = args.n_fixed_vars
 
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]

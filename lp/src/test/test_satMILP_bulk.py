@@ -58,8 +58,8 @@ if __name__ == "__main__":
 
     args = cmd_parser.parse_args()
 
-    filename = f"cnfs/{args.file}"
-    no_ext = args.file[:-4]
+    filename = args.file
+    no_ext = args.file.split("/")[-1][:-4]
     n_processes = args.n_processes if args.run_in_parallel else 1
     if not n_processes:
         n_processes = os.cpu_count()
