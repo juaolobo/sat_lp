@@ -56,7 +56,7 @@ class SATasLP(ABC):
 
     def verify(self, witness):
         clauses = self.clauses()
-        witness = np.array([-1 if xi == 0 else 1 for xi in witness])
+        witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in witness])
 
         for c in clauses:
             abs_c = np.abs(c) 
