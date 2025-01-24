@@ -18,8 +18,8 @@ class SATasLPOptimization(SATasLP):
             for i in range(1, self.n_vars() + 1)        
         ]
         
-        self.pos_vars = [self.solver.NumVar(0.0, 0.5, f"x+_{i}") for i in range(1,self.n_vars()+1)]
-        self.neg_vars = [self.solver.NumVar(0.0, 0.5, f"x-_{i}") for i in range(1,self.n_vars()+1)]
+        self.pos_vars = [self.solver.NumVar(0.0, 0.5, f"y+_{i}") for i in range(1,self.n_vars()+1)]
+        self.neg_vars = [self.solver.NumVar(0.0, 0.5, f"y-_{i}") for i in range(1,self.n_vars()+1)]
 
         # adjust constant terms of the inequalities
         clauses = self.clauses()
@@ -124,7 +124,7 @@ class SATasMILPOptimization(SATasLP):
     def _init_objects(self):
 
         self.vars = [self.solver.NumVar(0, 1.0, f"x_{i}") for i in range(1, self.n_vars() + 1)]
-        self.vars_prime = [self.solver.NumVar(0, 0.5, f"x_{i}") for i in range(1, self.n_vars() + 1)]
+        self.vars_prime = [self.solver.NumVar(0, 0.5, f"y_{i}") for i in range(1, self.n_vars() + 1)]
         self.betas = [
             self.solver.BoolVar(f"b_{i}") if i not in self.relaxed_vars
             else self.solver.NumVar(0 ,1.0, f"beta_{i}")
