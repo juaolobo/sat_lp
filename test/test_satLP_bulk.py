@@ -1,4 +1,4 @@
-from satlp import SATasLPWithFixing, SATasLPOriginal
+from satlp import SATasLPFeasibility, SATasLPOptimization
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -13,9 +13,9 @@ def create_parser():
         "-t", 
         "--type",
         required=True,
-        default="regular",
+        default="optimization",
         type=str,
-        help="'regular'= Use absolute value formulation. 'simple' = Use simple formulation without obj function."
+        help="'optimization'= Use absolute value formulation. 'feasibility' = Use simple formulation without obj function."
     )
     parser.add_argument(
         "-f", 
@@ -52,7 +52,7 @@ def _worker_simple(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
     n_fixed = len(fixing)
-    lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
+    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
 
@@ -69,7 +69,7 @@ def _worker(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
     n_fixed = len(fixing)
-    lp_obj = SATasLPOriginal(filename=filename, fixing=fixing)
+    lp_obj = SATasLPOptimization(filename=filename, fixing=fixing)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
 
@@ -99,13 +99,13 @@ if __name__ == "__main__":
     filename = args.file
     lp_type = args.type
 
-    if lp_type == "simple":
+    if lp_type == "feasibility":
         worker_fn = _worker_simple
-        experiments_file = f"experiments/{no_ext}-with-fixing-simple.csv"
+        experiments_file = f"experiments/{no_ext}-with-fixing-feasibility.csv"
 
-    elif lp_type == "regular":
+    elif lp_type == "optimization":
         worker_fn = _worker_simple
-        experiments_file = f"experiments/{no_ext}-with-fixing.csv"
+        experiments_file = f"experiments/{no_ext}-with-fixing-optimization.csv"
 
     solution_file = args.solution_file
     no_ext = args.file.split("/")[-1][:-4]

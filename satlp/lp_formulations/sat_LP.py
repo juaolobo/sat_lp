@@ -3,7 +3,7 @@ from satlp.sat_baseclass.sat_as_lp import SATasLP
 from ortools.linear_solver import pywraplp
 import numpy as np
 
-class SATasLPOriginal(SATasLP):
+class SATasLPOptimization(SATasLP):
 
     def __init__(self, filename=None, fixing={}):
         self.fixing = fixing
@@ -67,7 +67,7 @@ class SATasLPOriginal(SATasLP):
         self._create_optimization()
 
 
-class SATasLPWithFixing(SATasLP):
+class SATasLPFeasibility(SATasLP):
 
     def __init__(self, filename=None, fixing={}):
         self.fixing = fixing
@@ -115,7 +115,7 @@ class SATasLPWithFixing(SATasLP):
         self._init_objects()
         self._create_optimization()
 
-class SATasMILP(SATasLP):
+class SATasMILPOptimization(SATasLP):
 
     def __init__(self, filename=None, relaxed_vars=[], M=1):
         super().__init__(filename, relaxed_vars)
@@ -162,7 +162,7 @@ class SATasMILP(SATasLP):
             self.solver.Sum(self.vars_prime)
         )
 
-class SATasMILPSimple(SATasLP):
+class SATasMILPFeasibility(SATasLP):
 
     def __init__(self, filename=None, relaxed_vars=[]):
         super().__init__(filename, relaxed_vars)

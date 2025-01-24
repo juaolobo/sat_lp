@@ -1,4 +1,4 @@
-from .lp_formulations.sat_LP import SATasLPWithFixing, SATasLPOriginal
+from .lp_formulations.sat_LP import SATasLPFeasibility, SATasLPOptimization
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -49,7 +49,7 @@ def create_parser():
 def _worker(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
-    lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
+    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
     if status != 2:

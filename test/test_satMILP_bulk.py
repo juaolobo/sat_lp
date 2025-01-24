@@ -1,4 +1,4 @@
-from satlp import SATasMILPSimple, SATasMILP
+from satlp import SATasMILPFeasibility, SATasMILPOptimization
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -13,10 +13,9 @@ def create_parser():
         "-t", 
         "--type",
         required=True,
-        default="regular",
+        default="optimization",
         type=str,
-        help="'regular'= Use absolute value formulation. 'simple' = Use simple formulation without obj function."
-
+        help="'optimization'= Use absolute value formulation. 'feasibility'= Use simple formulation without obj function."
     )
     parser.add_argument(
         "-f", 
@@ -46,9 +45,24 @@ def create_parser():
 
     return parser
 
+def _worker_simple(cmb):
+    
+    lp_obj = SATasMILPFeasibility(relaxed_vars=cmb)
+    n_relaxed = len(cmb)
+    lp_obj.create_lp(filename)
+    s, res, witness = lp_obj.solve()
+    if s == lp_obj.solver.INFEASIBLE:
+        row = ["INFEASIBLE", False, [], cmb, n_relaxed]
+
+    else:
+        ok = lp_obj.verify(witness)
+        row = [res, ok, witness, cmb, n_relaxed]
+
+    return row
+
 def _worker(cmb):
     
-    lp_obj = SATasMILPSimple(relaxed_vars=cmb)
+    lp_obj = SATasMILPOptimization(relaxed_vars=cmb)
     n_relaxed = len(cmb)
     lp_obj.create_lp(filename)
     s, res, witness = lp_obj.solve()
@@ -78,13 +92,13 @@ if __name__ == "__main__":
         n_processes = os.cpu_count()
     n_vars = args.n_vars
 
-    if lp_type == "simple":
+    if lp_type == "feasibility":
         worker_fn = _worker_simple
-        experiments_file = f"experiments/{no_ext}-milp-simple.csv"
+        experiments_file = f"experiments/{no_ext}-milp-feasibility.csv"
 
-    elif lp_type == "regular":
+    elif lp_type == "optimization":
         worker_fn = _worker_simple
-        experiments_file = f"experiments/{no_ext}-milp.csv"
+        experiments_file = f"experiments/{no_ext}-milp-optimization.csv"
 
     with open(experiments_file, "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
