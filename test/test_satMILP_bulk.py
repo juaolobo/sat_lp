@@ -1,4 +1,4 @@
-from satlp import SATasMILPSimple
+from satlp import SATasMILPSimple, SATasMILP
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -9,6 +9,15 @@ import argparse
 
 def create_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-t", 
+        "--type",
+        required=True,
+        default="regular",
+        type=str,
+        help="'regular'= Use absolute value formulation. 'simple' = Use simple formulation without obj function."
+
+    )
     parser.add_argument(
         "-f", 
         "--file",
@@ -69,7 +78,15 @@ if __name__ == "__main__":
         n_processes = os.cpu_count()
     n_vars = args.n_vars
 
-    with open(f"experiments/{no_ext}-milp-simple.csv", "w") as f:
+    if lp_type == "simple":
+        worker_fn = _worker_simple
+        experiments_file = f"experiments/{no_ext}-milp-simple.csv"
+
+    elif lp_type == "regular":
+        worker_fn = _worker_simple
+        experiments_file = f"experiments/{no_ext}-milp.csv"
+
+    with open(experiments_file, "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
         columns = ['result','is_solution','witness','relaxed_vars', 'n_relaxed']

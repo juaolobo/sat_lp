@@ -1,4 +1,4 @@
-from lp_formulations.sat_LP import SATasLPWithFixing, SATasLPOriginal
+from satlp import SATasLPWithFixing, SATasLPOriginal
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -9,6 +9,14 @@ import argparse
 
 def create_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-t", 
+        "--type",
+        required=True,
+        default="regular",
+        type=str,
+        help="'regular'= Use absolute value formulation. 'simple' = Use simple formulation without obj function."
+    )
     parser.add_argument(
         "-f", 
         "--file",
@@ -40,11 +48,28 @@ def create_parser():
 
     return parser
 
-def _worker(cmb):
+def _worker_simple(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
     n_fixed = len(fixing)
     lp_obj = SATasLPWithFixing(filename=filename, fixing=fixing)
+    lp_obj.create_lp()
+    status, res, witness = lp_obj.solve()
+
+    if s == lp_obj.solver.INFEASIBLE:
+        row = ["INFEASIBLE", False, [], n_fixed, fixing]
+
+    else:
+        ok = lp_obj.verify(witness)
+        row = [res, ok, witness, n_fixed, fixing]
+    
+    return row
+
+def _worker(cmb):
+    ok = 0
+    fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
+    n_fixed = len(fixing)
+    lp_obj = SATasLPOriginal(filename=filename, fixing=fixing)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
 
@@ -72,6 +97,16 @@ if __name__ == "__main__":
         n_processes = os.cpu_count()
 
     filename = args.file
+    lp_type = args.type
+
+    if lp_type == "simple":
+        worker_fn = _worker_simple
+        experiments_file = f"experiments/{no_ext}-with-fixing-simple.csv"
+
+    elif lp_type == "regular":
+        worker_fn = _worker_simple
+        experiments_file = f"experiments/{no_ext}-with-fixing.csv"
+
     solution_file = args.solution_file
     no_ext = args.file.split("/")[-1][:-4]
     n_vars = args.n_vars
@@ -79,7 +114,7 @@ if __name__ == "__main__":
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]
 
-    with open(f"../experiments/{no_ext}-with-fixing.csv", "w") as f:
+    with open(experiments_file, "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
         columns = ['result','is_solution','witness', 'n_fixed', 'fixing']
