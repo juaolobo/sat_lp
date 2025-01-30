@@ -1,17 +1,14 @@
 from satlp import CNFLoader
 
 from ortools.linear_solver import pywraplp
+from scipy.optimize import linprog
 import numpy as np
 from abc import ABC, abstractmethod
 
-class SATasLP(ABC):
+class SATasLPBaseclass(ABC):
 
-    def __init__(self, filename=None, relaxed_vars=[]):
+    def __init__(self, filename=None):
         self.cnf_handler = CNFLoader(filename)
-        self.relaxed_vars = relaxed_vars
-        self.solver = pywraplp.Solver.CreateSolver("SCIP")
-        if not self.solver:
-            raise Exception("Solver creation failed")
 
     @abstractmethod
     def _init_objects(self):
@@ -42,17 +39,7 @@ class SATasLP(ABC):
         return [self._round(xi) for xi in x]
 
     def solve(self):
-        s = self.solver.Solve()
-
-        if s == self.solver.INFEASIBLE:
-            print("INFEASIBLE")
-            self.solver.Clear()
-            return s, [], []
-
-        result = self.solver.Objective().Value()
-        witness = self.round([v.solution_value() if not isinstance(v, int) else v for v in self.vars])
-
-        return s, result, witness
+        pass
 
     def verify(self, witness):
         clauses = self.clauses()

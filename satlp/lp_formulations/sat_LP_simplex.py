@@ -1,13 +1,12 @@
-from satlp.sat_baseclass.sat_as_lp import SATasLP
+from satlp.baseclass_implementation import SATasLPSimplex
 
-from ortools.linear_solver import pywraplp
 import numpy as np
 
-class SATasLPOptimization(SATasLP):
+class SATasLPOptimization(SATasLPSimplex):
 
     def __init__(self, filename=None, fixing={}):
         self.fixing = fixing
-        super().__init__(filename, None)
+        super().__init__(filename)
 
     def _init_objects(self):
 
@@ -67,18 +66,18 @@ class SATasLPOptimization(SATasLP):
         self._create_optimization()
 
 
-class SATasLPFeasibility(SATasLP):
+class SATasLPFeasibility(SATasLPSimplex):
 
     def __init__(self, filename=None, fixing={}):
         self.fixing = fixing
-        super().__init__(filename, None)
+        super().__init__(filename)
 
     def _init_objects(self):
 
         self.vars = [
             self.solver.NumVar(0 ,1.0, f"x_{i}") if i in self.relaxed_vars
             else 
-                self.solver.NumVar(self.fixing[i], self.fixing[i], f"B_{i}")
+                self.solver.NumVar(self.fixing[i], self.fixing[i], f"X_{i}")
             for i in range(1, self.n_vars() + 1)        
         ]
         
@@ -115,10 +114,11 @@ class SATasLPFeasibility(SATasLP):
         self._init_objects()
         self._create_optimization()
 
-class SATasMILPOptimization(SATasLP):
+class SATasMILPOptimization(SATasLPSimplex):
 
     def __init__(self, filename=None, relaxed_vars=[], M=1):
-        super().__init__(filename, relaxed_vars)
+        super().__init__(filename)
+        self.relaxed_vars = relaxed_vars
         self.M = M
 
     def _init_objects(self):
@@ -162,10 +162,11 @@ class SATasMILPOptimization(SATasLP):
             self.solver.Sum(self.vars_prime)
         )
 
-class SATasMILPFeasibility(SATasLP):
+class SATasMILPFeasibility(SATasLPSimplex):
 
     def __init__(self, filename=None, relaxed_vars=[]):
-        super().__init__(filename, relaxed_vars)
+        super().__init__(filename)
+        self.relaxed_vars = relaxed_vars
 
     def _init_objects(self):
 
