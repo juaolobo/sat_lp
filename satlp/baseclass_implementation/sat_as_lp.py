@@ -41,5 +41,7 @@ class SATasLPIP(SATasLPBaseclass):
             raise Exception("Solver creation failed")
 
     def solve(self):
-
-        return self.solver(self.c, A_ub=self.A, b_ub=self.y, bounds=self.bounds, method=self.method)
+        x = self.solver(self.c, A_ub=self.A, b_ub=self.y, bounds=self.bounds, method=self.method).x
+        witness = [x[i-1].item() if i not in self.fixing.keys() else self.fixing[i] for i in range(1,len(x)+1)]
+        
+        return witness
