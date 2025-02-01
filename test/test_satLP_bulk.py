@@ -123,7 +123,7 @@ if __name__ == "__main__":
         all_vars = range(1, n_vars+1)
         for i in tqdm(all_vars):
             cmbs = [c for c in combinations(solution, i)]
-            print(f"Testing combinations for (20 {i})")
+            print(f"Testing combinations for ({n_vars} {i})")
             with mp.Pool(n_processes) as p:
                 chunksize = round(len(cmbs)/n_processes)
                 chunksize = chunksize if chunksize > 0 else len(cmbs)
