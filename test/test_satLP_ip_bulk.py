@@ -1,4 +1,4 @@
-from satlp import SATasLPFeasibility, SATasLPOptimization
+from satlp import SATasLPFeasibilityIP
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -47,8 +47,9 @@ def _worker(cmb):
     lp_obj.create_lp()
     x = lp_obj.solve()
     ok = lp_obj.verify(x)
+    row = [1.0, ok, x, len(fixing), fixing]
 
-    return ok
+    return row
 
 if __name__ == "__main__":
 
@@ -65,12 +66,11 @@ if __name__ == "__main__":
         n_processes = os.cpu_count()
 
     filename = args.file
-    lp_type = args.type
+    no_ext = args.file.split("/")[-1][:-4]
 
     experiments_file = f"experiments/{no_ext}-with-fixing-ip-feasibility.csv"
 
     solution_file = args.solution_file
-    no_ext = args.file.split("/")[-1][:-4]
     n_vars = args.n_vars
 
     with open(solution_file, "r") as f:
