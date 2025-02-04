@@ -100,4 +100,4 @@ if __name__ == "__main__":
             oks = p.map(_worker, batch)
 
         print(sum(oks)/math.comb(n_vars, n_fixed_vars))
-        combs_left -= consume
+        combs_left -= batch_size
