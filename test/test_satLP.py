@@ -1,4 +1,4 @@
-from .lp_formulations.sat_LP import SATasLPFeasibility, SATasLPOptimization
+from satlp import SATasLPFeasibilityIP, SATasLPFeasibility
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -6,6 +6,7 @@ import sys
 import multiprocessing as mp 
 import os
 import argparse
+import math
 
 def create_parser():
     parser = argparse.ArgumentParser()
@@ -42,6 +43,12 @@ def create_parser():
         default=None, 
         help="If --run_in_parallel is active and n_processes=None, the program will use all available logical CPUs. Default is set to 'None'."
     )
+    parser.add_argument(
+        "-b", 
+        "--batch_size", 
+        type=int, 
+        default=10000, 
+    )
 
 
     return parser
@@ -49,13 +56,13 @@ def create_parser():
 def _worker(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
-    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing)
+    lp_obj = SATasLPFeasibilityIP(filename=filename, fixing=fixing)
     lp_obj.create_lp()
-    status, res, witness = lp_obj.solve()
-    if status != 2:
-        ok = lp_obj.verify(witness)
-        if ok:
-            print(fixing, witness)
+    x = lp_obj.solve()
+    ok = lp_obj.verify(x)
+    if ok:
+        print(fixing, x)
+
     return ok
 
 if __name__ == "__main__":
@@ -77,11 +84,20 @@ if __name__ == "__main__":
     no_ext = args.file[:-4]
     n_vars = args.n_vars
     n_fixed_vars = args.n_fixed_vars
+    batch_size = args.batch_size
 
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]
 
     combs = combinations(solution, n_fixed_vars)
+    
+    combs_left = math.comb(n_vars, n_fixed_vars)
 
-    with mp.Pool(n_processes) as p:
-        oks = p.map(_worker, combs)
+    while combs_left > 0:
+        batch = [next(combs) for i in range(batch_size)]
+
+        with mp.Pool(n_processes) as p:
+            oks = p.map(_worker, batch)
+
+        print(sum(oks)/math.comb(n_vars, n_fixed_vars))
+        combs_left -= consume
