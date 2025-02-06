@@ -37,4 +37,4 @@ class SATasLPFeasibilityIP(SATasLPIP):
 
     def _create_optimization(self):
         self.bounds = [0,1]
-        self.method = 'highs'
+        self.method = 'highs-ipm'
