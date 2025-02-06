@@ -50,7 +50,6 @@ def create_parser():
         default=10000, 
     )
 
-
     return parser
 
 def _worker(cmb):
@@ -61,7 +60,7 @@ def _worker(cmb):
     x = lp_obj.solve()
     ok = lp_obj.verify(x)
     if ok:
-        print(fixing, x)
+        print(fixing)
 
     return ok
 
@@ -94,10 +93,12 @@ if __name__ == "__main__":
     combs_left = math.comb(n_vars, n_fixed_vars)
 
     while combs_left > 0:
-        batch = [next(combs) for i in range(batch_size)]
+
+        n_samples = batch_size if batch_size < combs_left else combs_left
+        batch = [next(combs) for i in range(n_samples)]
 
         with mp.Pool(n_processes) as p:
             oks = p.map(_worker, batch)
 
-        print(sum(oks)/math.comb(n_vars, n_fixed_vars))
+        print(f"Convergence percentage this batch: {sum(oks)/batch_size} (batch size = {batch_size})")
         combs_left -= batch_size
