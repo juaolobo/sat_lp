@@ -92,6 +92,7 @@ if __name__ == "__main__":
     
     combs_left = math.comb(n_vars, n_fixed_vars)
 
+    print(f"Trying total of {combs_left} combinations")
     while combs_left > 0:
 
         n_samples = batch_size if batch_size < combs_left else combs_left
@@ -100,5 +101,5 @@ if __name__ == "__main__":
         with mp.Pool(n_processes) as p:
             oks = p.map(_worker, batch)
 
-        print(f"Convergence percentage this batch: {sum(oks)/batch_size} (batch size = {batch_size})")
+        print(f"Convergence percentage this batch: {sum(oks)/n_samples} (batch size = {n_samples})")
         combs_left -= batch_size
