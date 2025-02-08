@@ -7,4 +7,5 @@ from satlp.lp_formulations.sat_LP_simplex import (
 
 from satlp.lp_formulations.sat_LP_interior_points import (
     SATasLPFeasibilityIP,
+    SATasLPOptimizationIP,
 )

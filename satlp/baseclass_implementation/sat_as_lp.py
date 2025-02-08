@@ -32,8 +32,10 @@ class SATasLPIP(SATasLPBaseclass):
     def __init__(self, filename=None):
         super().__init__(filename)
         self.solver = linprog
-        self.A = None
-        self.y = None
+        self.A_lb = None
+        self.y_lb = None
+        self.A_eq = None
+        self.y_eq = None
         self.c = None
         self.bounds = None
         self.method = None
@@ -41,7 +43,21 @@ class SATasLPIP(SATasLPBaseclass):
             raise Exception("Solver creation failed")
 
     def solve(self):
-        x = self.solver(self.c, A_ub=self.A, b_ub=self.y, bounds=self.bounds, method=self.method).x
-        witness = [x[i-1].item() if i not in self.fixing.keys() else self.fixing[i] for i in range(1,len(x)+1)]
         
-        return witness
+        result = self.solver(
+            self.c, 
+            A_eq=self.A_eq, 
+            b_eq=self.y_eq,
+            A_ub=self.A_lb, 
+            b_ub=self.y_lb, 
+            bounds=self.bounds, 
+            method=self.method
+        )
+        x = result.x
+
+        if result.success:
+            witness = [x[i-1].item() if i not in self.fixing.keys() else self.fixing[i] for i in range(1,len(x)+1)]
+            return witness
+
+        print("INFEASIBLE")
+        

@@ -5,6 +5,7 @@ from satlp.lp_formulations import (
     SATasLPOptimization,
     SATasLPFeasibility,
     SATasLPFeasibilityIP,
+    SATasLPOptimizationIP,
     SATasMILPOptimization,
     SATasMILPFeasibility
 )
