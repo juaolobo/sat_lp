@@ -12,26 +12,25 @@ class SATasLPFeasibilityIP(SATasLPIP):
 
     def _init_objects(self):
         
-        y = np.zeros(shape=self.m_clauses())
-        A = np.zeros(shape=(self.m_clauses() + 2*self.n_vars(), self.n_vars()))
+        y_lb = np.zeros(shape=self.m_clauses())
+        A_lb = np.zeros(shape=(self.m_clauses(), self.n_vars()))
         for i, c in enumerate(self.clauses()):
             
             res_fixed = np.array([self.g(xi) for xi in c if abs(xi) in self.fixing.keys()])
             res = np.array([np.sign(xi) for xi in c if abs(xi) not in self.fixing.keys()])
 
-            y[i] = 1 - sum(res_fixed) - sum(res < 0)
+            y_lb[i] = 1 - sum(res_fixed) - sum(res < 0)
             for j in c:
                 idx = abs(j)-1
                 if abs(j) not in self.fixing.keys():
-                    A[i][idx] = np.sign(j).item()
+                    A_lb[i][idx] = np.sign(j).item()
 
         # feasibility
         c = np.zeros(self.n_vars())
 
-
         # scipy linprog deals with only minimization of upperbounded matrices 
-        self.y = -y
-        self.A = -A
+        self.y_ub = -y_lb
+        self.A_ub = -A_lb
         self.c = c
 
     def _create_optimization(self):
@@ -75,7 +74,7 @@ class SATasLPOptimizationIP(SATasLPIP):
         y_ub1 = np.zeros(shape=self.n_vars())
         A_ub1 = np.zeros(shape=(self.n_vars(), 3*self.n_vars()))
 
-        # x+ + x- <= 1/2
+        # y+ + y- <= 1/2
         for i in range(self.n_vars()):
             A_ub1[i][n+i] = 1
             A_ub1[i][2*n+i] = 1
@@ -102,6 +101,7 @@ class SATasLPOptimizationIP(SATasLPIP):
         self.c = c
 
     def _create_optimization(self):
+
         n = self.n_vars()
         self.bounds = [
             [0,1] if i < n 

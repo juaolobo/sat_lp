@@ -32,8 +32,8 @@ class SATasLPIP(SATasLPBaseclass):
     def __init__(self, filename=None):
         super().__init__(filename)
         self.solver = linprog
-        self.A_lb = None
-        self.y_lb = None
+        self.A_ub = None
+        self.y_ub = None
         self.A_eq = None
         self.y_eq = None
         self.c = None
@@ -43,13 +43,13 @@ class SATasLPIP(SATasLPBaseclass):
             raise Exception("Solver creation failed")
 
     def solve(self):
-        
+                    
         result = self.solver(
             self.c, 
             A_eq=self.A_eq, 
             b_eq=self.y_eq,
-            A_ub=self.A_lb, 
-            b_ub=self.y_lb, 
+            A_ub=self.A_ub, 
+            b_ub=self.y_ub, 
             bounds=self.bounds, 
             method=self.method
         )
