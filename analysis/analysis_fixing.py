@@ -30,7 +30,6 @@ fix_len = fixed_vars.apply(len)
 ranked_len = pd.DataFrame(fix_len.value_counts())
 
 max_comb = max(ranked_len.index)
-max_comb = 20
 ranked_len["comb_total"] = [comb(max_comb, i) for i in ranked_len["count"].index]
 ranked_len_pct = ranked_len["count"]/ranked_len["comb_total"]
 ranked_len["pct"] = ranked_len_pct
