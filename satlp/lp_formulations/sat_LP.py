@@ -74,10 +74,10 @@ class SATasLPOptimization(SATasLP):
         A_ub1 = np.zeros(shape=(self.n_vars(), 3*self.n_vars()))
 
         # y+ + y- <= 1/2
-        for i in range(self.n_vars()):
+        for i in range(n):
             A_ub1[i][n+i] = 1
             A_ub1[i][2*n+i] = 1
-            y_ub1[i] = -1/2
+            y_ub1[i] = 1/2
 
         y_ub = np.concatenate([y_ub, y_ub1])
         A_ub = np.concatenate([A_ub, A_ub1])
