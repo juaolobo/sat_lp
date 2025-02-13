@@ -13,7 +13,7 @@ def addlabels(x,y):
 if len(sys.argv) < 2:
     exit(0)
 
-filename = f"experiments/{sys.argv[1]}-experiments.csv"
+filename = f"experiments/{sys.argv[1]}.csv"
 figsize=(13, 8)
 df = pd.read_csv(filename)
 cvg = df[df["is_solution"] == True]
