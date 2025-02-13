@@ -1,4 +1,4 @@
-from satlp import SATasLPFeasibilityIP, SATasLPFeasibility
+from satlp import SATasLPFeasibility
 from tqdm import tqdm
 from itertools import combinations
 import csv
@@ -10,6 +10,15 @@ import math
 
 def create_parser():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-m", 
+        "--method",
+        required=True,
+        default="highs-dm",
+        type=str,
+        help="'highs-dm'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
+    )
     parser.add_argument(
         "-f", 
         "--file",
@@ -55,7 +64,7 @@ def create_parser():
 def _worker_ip(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
-    lp_obj = SATasLPFeasibilityIP(filename=filename, fixing=fixing)
+    lp_obj = SATasLPFeasibilityIP(filename=filename, fixing=fixing, method=method)
     lp_obj.create_lp()
     x = lp_obj.solve()
     ok = lp_obj.verify(x)
@@ -68,7 +77,7 @@ def _worker_ip(cmb):
 def _worker(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
-    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing)
+    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing, method=method)
     lp_obj.create_lp()
     _, _, x = lp_obj.solve()
     ok = lp_obj.verify(x)
@@ -99,6 +108,7 @@ if __name__ == "__main__":
     n_vars = args.n_vars
     n_fixed_vars = args.n_fixed_vars
     batch_size = args.batch_size
+    global method = args.method
 
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]

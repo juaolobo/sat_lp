@@ -10,6 +10,15 @@ import argparse
 def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "-m", 
+        "--method",
+        required=True,
+        default="highs-dm",
+        type=str,
+        help="'highs-dm'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
+    )
+
+    parser.add_argument(
         "-t", 
         "--type",
         required=True,
@@ -52,7 +61,7 @@ def _worker_simple(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
     n_fixed = len(fixing)
-    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing)
+    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing, method=method)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
 
@@ -69,16 +78,11 @@ def _worker(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
     n_fixed = len(fixing)
-    lp_obj = SATasLPOptimization(filename=filename, fixing=fixing)
+    lp_obj = SATasLPOptimization(filename=filename, fixing=fixing, method=method)
     lp_obj.create_lp()
     status, res, witness = lp_obj.solve()
-
-    if s == lp_obj.solver.INFEASIBLE:
-        row = ["INFEASIBLE", False, [], n_fixed, fixing]
-
-    else:
-        ok = lp_obj.verify(witness)
-        row = [res, ok, witness, n_fixed, fixing]
+    ok = lp_obj.verify(witness)
+    row = [res, ok, witness, n_fixed, fixing]
     
     return row
 
@@ -98,6 +102,10 @@ if __name__ == "__main__":
 
     filename = args.file
     lp_type = args.type
+    solution_file = args.solution_file
+    no_ext = args.file.split("/")[-1][:-4]
+    n_vars = args.n_vars
+    global method = args.method
 
     if lp_type == "feasibility":
         worker_fn = _worker_simple
@@ -106,10 +114,6 @@ if __name__ == "__main__":
     elif lp_type == "optimization":
         worker_fn = _worker_simple
         experiments_file = f"experiments/data/{no_ext}-simplex-optimization.csv"
-
-    solution_file = args.solution_file
-    no_ext = args.file.split("/")[-1][:-4]
-    n_vars = args.n_vars
 
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]
