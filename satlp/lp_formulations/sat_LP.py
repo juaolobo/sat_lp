@@ -1,14 +1,15 @@
-from satlp.baseclass_implementation import SATasLPIP
+from satlp.baseclass_implementation import SATasLP
 
 from scipy.optimize import linprog
 import numpy as np
 
-class SATasLPFeasibilityIP(SATasLPIP):
+# for simplex use method='highs-dm' for IPM use method='highs-ipm'
 
-    def __init__(self, filename=None, fixing={}):
+class SATasLPFeasibility(SATasLP):
+
+    def __init__(self, filename=None, fixing={}, method='highs-dm'):
         self.fixing = fixing
-        self.g = lambda x: 1 - self.fixing[abs(x)] if x < 0 else self.fixing[abs(x)]
-        super().__init__(filename)
+        super().__init__(filename, method)
 
     def _init_objects(self):
         
@@ -35,15 +36,13 @@ class SATasLPFeasibilityIP(SATasLPIP):
 
     def _create_optimization(self):
         self.bounds = [0,1]
-        self.method = 'highs-ipm'
 
 
-class SATasLPOptimizationIP(SATasLPIP):
+class SATasLPOptimization(SATasLP):
 
-    def __init__(self, filename=None, fixing={}):
+    def __init__(self, filename=None, fixing={}, method='highs-dm'):
         self.fixing = fixing
-        self.g = lambda x: 1 - self.fixing[abs(x)] if x < 0 else self.fixing[abs(x)]
-        super().__init__(filename)
+        super().__init__(filename, method)
 
     def _init_objects(self):
         
@@ -108,4 +107,3 @@ class SATasLPOptimizationIP(SATasLPIP):
             else [0, 1/2] 
             for i in range(3*n)
         ]
-        self.method = 'highs-ipm'

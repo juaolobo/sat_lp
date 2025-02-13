@@ -5,40 +5,20 @@ from scipy.optimize import linprog
 import numpy as np
 from abc import ABC, abstractmethod
 
+class SATasLP(SATasLPBaseclass):
 
-class SATasLPSimplex(SATasLPBaseclass):
-
-    def __init__(self, filename=None):
-        super().__init__(filename)
-        self.solver = pywraplp.Solver.CreateSolver("SCIP")
-        if not self.solver:
-            raise Exception("Solver creation failed")
-
-    def solve(self):
-        s = self.solver.Solve()
-
-        if s == self.solver.INFEASIBLE:
-            print("INFEASIBLE")
-            self.solver.Clear()
-            return s, [], []
-
-        result = self.solver.Objective().Value()
-        witness = self.round([v.solution_value() if not isinstance(v, int) else v for v in self.vars])
-
-        return s, result, witness
-
-class SATasLPIP(SATasLPBaseclass):
-
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, method=None):
         super().__init__(filename)
         self.solver = linprog
+        self.g = lambda x: 1 - self.fixing[abs(x)] if x < 0 else self.fixing[abs(x)]
         self.A_ub = None
         self.y_ub = None
         self.A_eq = None
         self.y_eq = None
         self.c = None
         self.bounds = None
-        self.method = None
+        self.method = method
+
         if not self.solver:
             raise Exception("Solver creation failed")
 
@@ -60,4 +40,26 @@ class SATasLPIP(SATasLPBaseclass):
             return witness
 
         print("INFEASIBLE")
+
+class SATasMILP(SATasLPBaseclass):
+
+    def __init__(self, filename=None):
+        super().__init__(filename)
+        self.solver = pywraplp.Solver.CreateSolver("SCIP")
+        if not self.solver:
+            raise Exception("Solver creation failed")
+
+    def solve(self):
+        s = self.solver.Solve()
+
+        if s == self.solver.INFEASIBLE:
+            print("INFEASIBLE")
+            self.solver.Clear()
+            return s, [], []
+
+        result = self.solver.Objective().Value()
+        witness = self.round([v.solution_value() if not isinstance(v, int) else v for v in self.vars])
+
+        return s, result, witness
+
         

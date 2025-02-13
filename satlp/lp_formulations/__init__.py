@@ -1,11 +1,9 @@
-from satlp.lp_formulations.sat_LP_simplex import (
-    SATasLPOptimization,
-    SATasLPFeasibility,
+from satlp.lp_formulations.sat_MILP import (
     SATasMILPOptimization,
     SATasMILPFeasibility
 )
 
-from satlp.lp_formulations.sat_LP_interior_points import (
-    SATasLPFeasibilityIP,
-    SATasLPOptimizationIP,
+from satlp.lp_formulations.sat_LP import (
+    SATasLPFeasibility,
+    SATasLPOptimization,
 )
