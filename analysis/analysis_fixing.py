@@ -1,20 +1,17 @@
 import pandas as pd
 from ast import literal_eval
 from math import comb
-from matplotlib import pyplot as plt
 import sys
-
-def addlabels(x,y):
-    delta = 2e-2
-    props = dict(boxstyle='round', facecolor='beige', alpha=0.5)
-    for i in range(len(x)):
-        plt.text(i, y[i] + delta, round(y[i], 2), ha = 'center', parse_math=True, bbox=props)
+import os
 
 if len(sys.argv) < 2:
     exit(0)
 
-filename = f"experiments/{sys.argv[1]}-experiments.csv"
-figsize=(13, 8)
+dir_path = f"./figs/{sys.argv[1]}"
+if not os.path.exists(dir_path):
+    os.makedirs(dir_path)
+
+filename = f"experiments/data/{sys.argv[1]}.csv"
 df = pd.read_csv(filename)
 cvg = df[df["is_solution"] == True]
 ncvg = df[df["is_solution"] == False]
@@ -27,11 +24,7 @@ ranked_vars_pct = ranked_vars/len(fixed_vars)
 ranked_vars["pct"] = ranked_vars_pct
 
 df_vars_ncvg = ranked_vars
-
-fig = plt.figure(figsize=figsize)
-df_vars_ncvg["pct"].plot(kind='bar', title='Percentage of times that fixing variables lead in divergent solution')
-addlabels(df_vars_ncvg["pct"].index, df_vars_ncvg["pct"].values)
-plt.savefig(f"figs/{sys.argv[1]}-non_convergent_vars.png")
+df_vars_ncvg.to_csv(f"experiments/processed/{sys.argv[1]}-non_convergent_vars.csv")
 
 fix_len = fixed_vars.apply(len)
 ranked_len = pd.DataFrame(fix_len.value_counts())
@@ -45,12 +38,7 @@ df_len_ncvg = (ranked_len
                 .sort_values(by=["pct", "fixing"])
                 .drop(columns="comb_total"))
 
-fig = plt.figure(figsize=figsize)
-df_len_ncvg["pct"].plot(kind='bar', title="Number of fixed variables in divergent solution")
-addlabels(df_len_ncvg["pct"].index, df_len_ncvg["pct"].values)
-plt.savefig(f"figs/{sys.argv[1]}-non_convergent_len.png")
-
-breakpoint()
+df_len_ncvg.to_csv(f"experiments/processed/{sys.argv[1]}-non_convergent_len.csv")
 
 
 
