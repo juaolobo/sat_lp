@@ -52,17 +52,32 @@ def create_parser():
 
     return parser
 
-def _worker(cmb):
+def _worker_ip(cmb):
     ok = 0
     fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
     lp_obj = SATasLPFeasibilityIP(filename=filename, fixing=fixing)
     lp_obj.create_lp()
     x = lp_obj.solve()
     ok = lp_obj.verify(x)
+
     if ok:
         print(fixing)
 
     return ok
+
+def _worker(cmb):
+    ok = 0
+    fixing = {abs(xi): 0 if xi < 0 else 1 for xi in cmb}
+    lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing)
+    lp_obj.create_lp()
+    _, _, x = lp_obj.solve()
+    ok = lp_obj.verify(x)
+
+    if ok:
+        print(fixing)
+
+    return ok
+
 
 if __name__ == "__main__":
 
@@ -88,18 +103,23 @@ if __name__ == "__main__":
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]
 
-    combs = combinations(solution, n_fixed_vars)
     
-    combs_left = math.comb(n_vars, n_fixed_vars)
+    total_combs = math.comb(n_vars, n_fixed_vars)
+    for worker in [_worker_ip, _worker]:
+        combs = combinations(solution, n_fixed_vars)
+        combs_left = total_combs
+        total = 0
+        print(f"Trying total of {combs_left} combinations")
+        while combs_left > 0:
 
-    print(f"Trying total of {combs_left} combinations")
-    while combs_left > 0:
+            n_samples = batch_size if batch_size < combs_left else combs_left
+            batch = [next(combs) for i in range(n_samples)]
 
-        n_samples = batch_size if batch_size < combs_left else combs_left
-        batch = [next(combs) for i in range(n_samples)]
+            with mp.Pool(n_processes) as p:
+                oks = p.map(worker, batch)
 
-        with mp.Pool(n_processes) as p:
-            oks = p.map(_worker, batch)
-
-        print(f"Convergence percentage this batch: {sum(oks)/n_samples} (batch size = {n_samples})")
-        combs_left -= batch_size
+            res = sum(oks)
+            print(f"Convergence percentage this batch: {res/n_samples} (batch size = {n_samples})")
+            total += res
+            print(f"Total convergence so far: {total/total_combs}")
+            combs_left -= batch_size

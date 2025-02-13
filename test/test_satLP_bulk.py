@@ -101,11 +101,11 @@ if __name__ == "__main__":
 
     if lp_type == "feasibility":
         worker_fn = _worker_simple
-        experiments_file = f"experiments/{no_ext}-with-fixing-feasibility.csv"
+        experiments_file = f"experiments/data/{no_ext}-simplex-feasibility.csv"
 
     elif lp_type == "optimization":
         worker_fn = _worker_simple
-        experiments_file = f"experiments/{no_ext}-with-fixing-optimization.csv"
+        experiments_file = f"experiments/data/{no_ext}-simplex-optimization.csv"
 
     solution_file = args.solution_file
     no_ext = args.file.split("/")[-1][:-4]

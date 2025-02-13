@@ -68,7 +68,7 @@ if __name__ == "__main__":
     filename = args.file
     no_ext = args.file.split("/")[-1][:-4]
 
-    experiments_file = f"experiments/{no_ext}-with-fixing-ip-feasibility.csv"
+    experiments_file = f"experiments/{no_ext}-ip-feasibility.csv"
 
     solution_file = args.solution_file
     n_vars = args.n_vars
