@@ -23,7 +23,7 @@ class CNFLoader():
 
         self.n_vars = n_variables
         self.m_clauses = m_clauses
-        self.clauses = clauses
+        self.clauses = np.array(clauses)
 
     def load(self, filename):
         if (self.clauses == None) or (filename != self.filename):
