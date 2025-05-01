@@ -1,3 +1,4 @@
+from numpy import array as np_array
 class CNFLoader():
 
     def __init__(self, filename=None):
@@ -18,12 +19,13 @@ class CNFLoader():
             n_variables = int(cnf_data[0].split()[-2])
             clauses = [
                 [int(i) for i in l.split()[:-1]]
-                    for l in cnf_data[1:]
+                    for l in cnf_data[1:] if len(l) > 0
             ]
 
         self.n_vars = n_variables
-        self.m_clauses = m_clauses
-        self.clauses = np.array(clauses)
+        self.m_clauses = len(clauses)
+        # self.clauses = np_array(clauses)
+        self.clauses = clauses
 
     def load(self, filename):
         if (self.clauses == None) or (filename != self.filename):

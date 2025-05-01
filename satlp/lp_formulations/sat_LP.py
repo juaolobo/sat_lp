@@ -16,7 +16,7 @@ class SATasLPFeasibility(SATasLP):
         y_lb = np.zeros(shape=self.m_clauses())
         A_lb = np.zeros(shape=(self.m_clauses(), self.n_vars()))
         for i, c in enumerate(self.clauses()):
-            
+
             res_fixed = np.array([self.g(xi) for xi in c if abs(xi) in self.fixing.keys()])
             res = np.array([np.sign(xi) for xi in c if abs(xi) not in self.fixing.keys()])
 
@@ -36,7 +36,6 @@ class SATasLPFeasibility(SATasLP):
 
     def _create_optimization(self):
         self.bounds = [0,1]
-
 
 class SATasLPOptimization(SATasLP):
 
@@ -58,8 +57,8 @@ class SATasLPOptimization(SATasLP):
             
             res_fixed = np.array([self.g(xi) for xi in c if abs(xi) in self.fixing.keys()])
             res = np.array([np.sign(xi) for xi in c if abs(xi) not in self.fixing.keys()])
-
             y_lb[i] = 1 - sum(res_fixed) - sum(res < 0)
+
             for j in c:
                 idx = abs(j)-1
                 if abs(j) not in self.fixing.keys():
@@ -75,22 +74,29 @@ class SATasLPOptimization(SATasLP):
 
         # y+ + y- <= 1/2
         for i in range(n):
-            A_ub1[i][n+i] = 1
-            A_ub1[i][2*n+i] = 1
-            y_ub1[i] = 1/2
+            if i+1 not in self.fixing.keys():
+                A_ub1[i][n+i] = 1
+                A_ub1[i][2*n+i] = 1
+                y_ub1[i] = 1/2
 
+        # # inefficient but more readable
         y_ub = np.concatenate([y_ub, y_ub1])
         A_ub = np.concatenate([A_ub, A_ub1])
         # optimization
         # x_i + y_n+i - y_2n+i = 1/2
         for i in range(self.n_vars()):
-            A_eq[i][i] = 1
-            A_eq[i][n+i] = 1
-            A_eq[i][2*n+i] = -1
-            y_eq[i] = 1/2
+            if i+1 not in self.fixing.keys():
+                A_eq[i][i] = 1
+                A_eq[i][n+i] = 1
+                A_eq[i][2*n+i] = -1
+                y_eq[i] = 1/2
 
         c = -np.ones(3*self.n_vars())
         c[:n] = 0
+        for i in range(n):
+            if i+1 in self.fixing.keys():
+                c[i+n] = 0
+                c[i+2*n] = 0
 
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub

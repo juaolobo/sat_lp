@@ -2,7 +2,6 @@ from satlp.baseclass_implementation import SATasMILP
 
 import numpy as np
 
-
 class SATasMILPOptimization(SATasMILP):
 
     def __init__(self, filename=None, relaxed_vars=[], M=1):

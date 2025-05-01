@@ -22,10 +22,11 @@ class SATasLP(SATasLPBaseclass):
         if not self.solver:
             raise Exception("Solver creation failed")
 
-    def solve(self):
+    def solve(self, x0=None):
                     
         result = self.solver(
             self.c, 
+            x0=x0,
             A_eq=self.A_eq, 
             b_eq=self.y_eq,
             A_ub=self.A_ub, 
