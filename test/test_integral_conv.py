@@ -27,14 +27,6 @@ def create_parser():
     )
 
     parser.add_argument(
-        "-sd", 
-        "--solutions_dir",
-        required=True,
-        type=str,
-        help="Directory for solution files."
-    )
-
-    parser.add_argument(
         "-t", 
         "--type",
         required=False,
@@ -64,10 +56,7 @@ def create_parser():
 def _worker_feas(files):
 
 
-    file, solutions = files
-
-    with open(solutions) as f:
-        sols = [l for l in f.readlines()]
+    file = files
 
     new_fixing = {}
     fixing = {}
@@ -77,11 +66,9 @@ def _worker_feas(files):
         lp_obj.create_lp()
         n = lp_obj.n_vars()
         witness = lp_obj.solve()
-        solution = np.zeros(n)
         for i, xi in enumerate(witness[:n]):
             if xi.is_integer():
                 new_fixing[i+1] = xi
-                solution[i] = i+1 if xi > 0 else -i-1
 
         if fixing != new_fixing:
             fixing = new_fixing
@@ -90,7 +77,7 @@ def _worker_feas(files):
             break
 
     
-    integral_vars = sum(solution != 0)
+    integral_vars = len(fixing)
 
     ok = lp_obj.verify(witness)
     name = file.split("/")[-1]
@@ -105,11 +92,9 @@ def _worker_feas(files):
 
 def _worker_opt(files):
     
-    file, solutions = files
+    file = files
 
-    with open(solutions) as f:
-        sols = [l for l in f.readlines()]
-
+    print(file)
     new_fixing = {}
     fixing = {}
     while True:
@@ -118,11 +103,9 @@ def _worker_opt(files):
         lp_obj.create_lp()
         n = lp_obj.n_vars()
         witness = lp_obj.solve()
-        solution = np.zeros(n)
         for i, xi in enumerate(witness[:n]):
             if xi.is_integer():
                 new_fixing[i+1] = xi
-                solution[i] = i+1 if xi > 0 else -i-1
 
         if fixing != new_fixing:
             fixing = new_fixing
@@ -131,7 +114,7 @@ def _worker_opt(files):
             break
 
     
-    integral_vars = sum(solution != 0)
+    integral_vars = len(fixing)
     ok = lp_obj.verify(witness)
     name = file.split("/")[-1]
 
@@ -161,11 +144,9 @@ if __name__ == "__main__":
     n_vars = args.n_vars
 
     files_dir = args.dir if args.dir[-1] != '/' else args.dir[:-1]
-    solutions_dir = args.solutions_dir if args.solutions_dir[-1] != '/' else args.solutions_dir[:-1]
     method = args.method
     
     files = [f"{files_dir}/{f}" for f in os.listdir(files_dir)]
-    solution_files = [f"{solutions_dir}/{f}" for f in os.listdir(solutions_dir)]
 
     if lp_type == "feasibility":
         worker_fn = _worker_feas
@@ -185,6 +166,6 @@ if __name__ == "__main__":
             chunksize = round(len(files)/n_processes)
             chunksize = chunksize if chunksize > 0 else len(files)
 
-            csv_list = p.map(worker_fn, zip(files, solution_files), chunksize=chunksize)
+            csv_list = p.map(worker_fn, files, chunksize=chunksize)
             for csv_values in csv_list:
                 writer.writerow(csv_values)
