@@ -38,6 +38,10 @@ class SATasLPBaseclass(ABC):
     def round(self, x):
         return [self._round(xi) for xi in x]
 
+    def add_clause(self, clause):
+        self.cnf_handler.clauses.append(clause)
+        self.cnf_handler.m_clauses += 1
+
     def solve(self):
         pass
 

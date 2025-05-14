@@ -23,7 +23,7 @@ class SATasLP(SATasLPBaseclass):
             raise Exception("Solver creation failed")
 
     def solve(self, x0=None):
-                    
+
         result = self.solver(
             self.c, 
             x0=x0,
