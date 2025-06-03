@@ -35,3 +35,4 @@ df_len_ncvg = (ranked_len
                 .drop(columns="comb_total"))
 
 df_len_ncvg.to_csv(f"experiments/processed/{sys.argv[1]}-non_convergent_len.csv")
+

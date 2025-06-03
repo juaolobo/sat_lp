@@ -15,7 +15,7 @@ def create_parser():
         required=False,
         default="highs-ipm",
         type=str,
-        help="'highs-dm'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
+        help="'highs-ds'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
     )
 
     parser.add_argument(
@@ -53,10 +53,10 @@ def create_parser():
 
     return parser
 
-def _worker_feas(files):
+def _worker_feas(args):
 
 
-    file = files
+    file, method = args
 
     new_fixing = {}
     fixing = {}
@@ -90,11 +90,10 @@ def _worker_feas(files):
     return row
 
 
-def _worker_opt(files):
+def _worker_opt(args):
     
-    file = files
+    file, method = args
 
-    print(file)
     new_fixing = {}
     fixing = {}
     while True:
@@ -150,11 +149,11 @@ if __name__ == "__main__":
 
     if lp_type == "feasibility":
         worker_fn = _worker_feas
-        experiments_file = f"experiments/data/integral_conv/uf{n_vars}-feasibility.csv"
+        experiments_file = f"experiments/data/integral_conv/uf{n_vars}-feasibility-{method}.csv"
 
     elif lp_type == "optimization":
         worker_fn = _worker_opt
-        experiments_file = f"experiments/data/integral_conv/uf{n_vars}-optimization.csv"
+        experiments_file = f"experiments/data/integral_conv/uf{n_vars}-optimization-{method}.csv"
 
     with open(experiments_file, "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
@@ -165,7 +164,6 @@ if __name__ == "__main__":
         with mp.Pool(n_processes) as p:
             chunksize = round(len(files)/n_processes)
             chunksize = chunksize if chunksize > 0 else len(files)
-
-            csv_list = p.map(worker_fn, files, chunksize=chunksize)
+            csv_list = p.map(worker_fn, zip(files, [method]*len(files)), chunksize=chunksize)
             for csv_values in csv_list:
                 writer.writerow(csv_values)

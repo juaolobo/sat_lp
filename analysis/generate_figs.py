@@ -20,6 +20,7 @@ if not os.path.exists(dir_path):
 
 filename_vars = f"experiments/processed/{sys.argv[1]}-non_convergent_vars.csv"
 filename_len = f"experiments/processed/{sys.argv[1]}-non_convergent_len.csv"
+
 figsize=(13, 8)
 df_vars = pd.read_csv(filename_vars).set_index("fixing")
 df_len = pd.read_csv(filename_len).set_index("n_fixed")

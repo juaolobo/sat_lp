@@ -1,4 +1,5 @@
 import numpy as np
+
 class CNFLoader():
 
     def __init__(self, filename=None):
@@ -42,7 +43,7 @@ class CNFLoader():
                 if not_x.any():
                     relevant = -assignments[not_x]
                     simple_c = [c[i] for i in range(len(c)) if c[i] not in relevant]
-                    simple_clauses.append(simple_c)                    
+                    simple_clauses.append(simple_c)
 
         return simple_clauses
 
@@ -54,6 +55,17 @@ class CNFLoader():
                     _c = np.array(c)
                     _p = np.array(p)
                     idx = (_c == _p)
-                    inf_assignments.append(_p[idx].item())
+                    print(idx)
+                    if idx.any():
+                        print(idx)
+                        new_inf = _p[idx].item()
+                        return new_inf
+                    #     if -new_inf in inf_assignments:
+                    #         # conflict
+                    #         break
+                    #     inf_assignments.append(_p[idx].item())
+                    # else:
+                    #     breakpoint()
+
 
         return inf_assignments        

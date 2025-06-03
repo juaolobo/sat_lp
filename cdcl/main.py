@@ -17,11 +17,8 @@ def main():
 
     input_cnf_file = args.input
     verbose = args.verbose
-    _bootstrap = [-4, -6, 7, 9, 10, 11, -12, -14, 15, -16, -17, 18, -21, -27, -28, 29, 31, -33, 35, 37, -38, -40, 41, -43, 44, -45, 46, 47]
 
-
-
-    solver = CDCL_Solver(input_cnf_file, verbose, _bootstrap=_bootstrap)
+    solver = CDCL_Solver(input_cnf_file, verbose)
     solver.solve()
 
 if __name__ == '__main__':

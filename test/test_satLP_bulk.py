@@ -13,9 +13,9 @@ def create_parser():
         "-m", 
         "--method",
         required=True,
-        default="highs-dm",
+        default="highs-ds",
         type=str,
-        help="'highs-dm'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
+        help="'highs-ds'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
     )
 
     parser.add_argument(
