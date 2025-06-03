@@ -44,11 +44,6 @@ solutions = f"../solutions/uf{n_vars}/uf{n_vars}-0{cnf_idx}.cnf.out"
 with open(solutions) as f:
     sols = [l for l in f.readlines()]
 
-# fixing = {1:0, 4: 0, 5: 1, 6: 1, 8: 0, 9: 0, 10: 1, 13: 0, 15: 0, 16: 1, 17: 1, 18: 1}
-# ass = np.array([-1, -4, 5, 6, -8, -9, 10, -13, -15, 16, 17, 18])
-# fixing = {1: 0, 4: 0, 5: 1, 6: 1, 8: 0, 9: 0, 10: 1, 13: 0, 15: 0, 16: 1, 17: 1, 18: 1}
-# ass = np.array([1, 2, -3, 6, 11, -14, 16, 17, -19])
-# fixing = {1: 1, 2: 1, 3: 0, 6: 1, 11: 1, 14: 0, 16: 1, 17: 1, 19:0}
 fixing = {}
 last_integral = None
 integral_vars = None
@@ -60,15 +55,15 @@ restarts = 0
 
 lp = SATasLPFeasibility(fixing=fixing, filename=filename, method='highs-ipm')
 solver = CDCL_Solver(filename, verbose=0)
-solver.solve()
 
 while 1:
 
     lp.create_lp()
     last_witness = witness
     witness = lp.solve()
+
+    # i.e. INFEASIBLE
     if witness == None:
-        fixing = {}
         witness = [0.5 for _ in range(lp.n_vars())]
         restarts += 1
         break
@@ -98,24 +93,25 @@ while 1:
     print(f"Solution is wrong {min_err} by variables {wrong_idxs}")
     print("-------------------------------------------------------")
 
-    # if new_fixing == fixing:
-    solver.restart(hypotheses=dmacs_sol)
-    resolved, formula = solver.solve_for_real()
-    new_clauses = [f.clause for f in formula.formula[lp.m_clauses():]]
-    if len(new_clauses) > 0:
+    if new_fixing == fixing:
+
+        solver.restart()
+        resolved, formula = solver.propagate_linear(dmacs_sol)
+        new_clauses = [f.clause for f in formula.formula[lp.m_clauses():]]
+
+        if len(new_clauses) == 0:
+            resolved, formula = solver.extend_solution()
+            new_clauses = [f.clause for f in formula.formula[lp.m_clauses():]]
+
         for c in new_clauses:
             lp.add_clause(c)
             solver.list_clause.append(c)
 
-        fixing = {abs(xi): 1 if xi > 0 else 0 for i, xi in enumerate(resolved)}
-        # else:
-        #     fixing = {}
-            
+        fixing = {abs(xi): 1.0 if xi > 0 else 0.0 for i, xi in enumerate(resolved)}
+                
     else:
         fixing = new_fixing
 
-    breakpoint()    
-    print(fixing)
     # if new_fixing == fixing and 0:
     #     # while dmacs_sol is not None:
     #     for _ in range(n*len(dmacs_sol)):
@@ -152,9 +148,6 @@ while 1:
 
     lp.restart(fixing=fixing)
     
-solver = CDCL_Solver(original_f, verbose=0, hypotheses=[])
-solver.solve()
-
 if witness:
     sol = lp.verify(witness)
     if sol:
@@ -170,4 +163,7 @@ else:
 
 stop = time.time()
 print(f"Iterations executed: {it}; elapsed time: {stop-start:.3f} seconds")
+
+solver = CDCL_Solver(original_f, verbose=0)
+solver.solve()
 

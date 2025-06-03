@@ -114,14 +114,12 @@ class Clause:
 
 class CNF_Formula:
     
-    def __init__(self, list_clause, hypotheses):
+    def __init__(self, list_clause):
         # self.formula = [Clause(c) for c in list_clause]
         self.formula = []
         for c in list_clause:
             if len(c) > 0:
                 clause = Lazy_Clause(c)
-                hyp = [h for h in hypotheses if h in c or -h in c]
-                clause.set_hypotheses(hyp)
                 self.formula.append(clause)
         # self.formula = [Lazy_Clause(c) for c in list_clause if len(c) > 0]
 
@@ -189,7 +187,7 @@ class CNF_Formula:
                     _pair = np.array(sorted(pair.clause[:pair.size], key=abs))
                     idx = (_cl == _pair)
 
-                    if idx.any():
+                    if idx.sum() == 1:
                         if _cl[idx] == _pair[idx] and _cl[~idx] == -_pair[~idx]:
                             new_inf = _pair[idx].item()
                             dl = [-1 for i in range(len(cl.clause))]
@@ -358,9 +356,6 @@ class Lazy_Clause:
         print('[C] Truth value: ', self.value)
         print('[C] Full clause ', self.clause)
         print('[C] Details on decision_level: ', self.decision_level)
-
-    def set_hypotheses(self, hypotheses):
-        self.hypotheses = hypotheses
 
     def is_unit(self):
         if self.size == 1:
@@ -550,6 +545,8 @@ class Lazy_Clause:
         # print("After restore at lvl ", level)
         # self.print_info()
         assert self.size == self.decision_level.count(-1)
+        if max(self.decision_level) > level:
+            breakpoint()
         assert max(self.decision_level) <= level
 
     def repair_hypothesis(self, lit, graph):
