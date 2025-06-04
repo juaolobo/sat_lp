@@ -1,10 +1,12 @@
-class Implication_Graph:
+class ImplicationGraph:
 
     def __init__(self):
         self.graph = dict()
         self.assigned_vars = []
         
     def add_node(self, literal, antecedent, decision_level):
+        if literal in self.assigned_vars or -literal in self.assigned_vars:
+            breakpoint()
         assert literal not in self.assigned_vars
         assert -literal not in self.assigned_vars
         self.graph[literal] = [antecedent, decision_level]
@@ -23,6 +25,7 @@ class Implication_Graph:
         for node in reversed(assigned_list):
             if self.graph[node][1] > backtrack_level:
                 self.remove_node(node)
+
         list_lvl = [self.graph[item][1] for item in self.graph.keys()]
         if len(list_lvl)>0:
             assert max(list_lvl) <= backtrack_level

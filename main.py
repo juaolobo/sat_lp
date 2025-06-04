@@ -5,7 +5,7 @@ from satlp import (
     SATasMILPOptimization,
     SATasMILPFeasibility
 )
-from cdcl import CDCL_Solver
+from cdcl import Solver
 import numpy as np
 from scipy.optimize import linprog
 import random
@@ -30,7 +30,7 @@ def check_solutions(solutions, solution):
     return min_err, min_sol, wrong_idxs
 
 n_vars = 20
-cnf_idx = 4
+cnf_idx = 10
 original_f = f"../cnfs/uf{n_vars}/uf{n_vars}-0{cnf_idx}.cnf"
 filename = f"../cnfs/uf{n_vars}/uf{n_vars}-0{cnf_idx}.cnf.copy"
 os.system(f"cp {original_f} {filename}")
@@ -54,7 +54,7 @@ start = time.time()
 restarts = 0
 
 lp = SATasLPFeasibility(fixing=fixing, filename=filename, method='highs-ipm')
-solver = CDCL_Solver(filename, verbose=0)
+solver = Solver(filename, verbose=0)
 
 while 1:
 
@@ -75,28 +75,27 @@ while 1:
 
     n = lp.n_vars()
     solution = np.zeros(n)
-    new_fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer()}
-    dmacs_sol = [xi if new_fixing[xi] else -xi for xi in new_fixing.keys()]
-
+    new_fixing = {}
     for i, xi in enumerate(witness):
         if xi.is_integer():
             new_fixing[i+1] = xi
-            solution[i] = i+1 if xi > 0 else -i-1
+            solution[i] = i+1 if xi > 0 else -i-1    
 
+    linear_sol = [xi if new_fixing[xi] else -xi for xi in new_fixing.keys()]
     last_integral = integral_vars
     integral_vars = sum(solution != 0)
 
     min_err, min_sol, wrong_idxs = check_solutions(sols, solution)
 
     print(f"Program achieved {integral_vars} integral variables")
-    print(f"Partial LP solution: {dmacs_sol}")
+    print(f"Partial LP solution: {linear_sol}")
     print(f"Solution is wrong {min_err} by variables {wrong_idxs}")
     print("-------------------------------------------------------")
 
     if new_fixing == fixing:
 
         solver.restart()
-        resolved, formula = solver.propagate_linear(dmacs_sol)
+        resolved, formula = solver.propagate_linear(linear_sol)
         new_clauses = [f.clause for f in formula.formula[lp.m_clauses():]]
 
         if len(new_clauses) == 0:
@@ -112,40 +111,6 @@ while 1:
     else:
         fixing = new_fixing
 
-    # if new_fixing == fixing and 0:
-    #     # while dmacs_sol is not None:
-    #     for _ in range(n*len(dmacs_sol)):
-    #     # while resolved is None:
-    #         solver.restart(hypotheses=dmacs_sol)
-    #         resolved, formula = solver.solve_for_conflict2()
-    #         if resolved is not None:
-    #             print(f"Resolved solution: {resolved}")
-    #             new_clauses = [f.clause for f in formula.formula[lp.m_clauses():]]
-    #             print(f"Learned clauses:")
-    #             for c in new_clauses:
-    #                 print("\t" + str(c))
-                    
-    #             if len(new_clauses) > 0:
-    #                 for c in new_clauses:
-    #                     lp.add_clause(c)
-    #                     solver.list_clause.append(c)
-
-    #                 if len(resolved) > 0:
-    #                     fixing = {abs(xi): 1 if xi > 0 else 0 for xi in resolved}
-    #                 else:
-    #                     fixing = {}
-
-    #                 print(f"Total clauses: {lp.m_clauses()}")
-    #                 print(f"Learned {len(new_clauses)} clause(s)")
-    #                 print("-------------------------------------------------------")
-    #         else:
-    #             break
-
-    #         # dmacs_sol=resolved
-
-    # else:
-    #     fixing = new_fixing
-
     lp.restart(fixing=fixing)
     
 if witness:
@@ -156,7 +121,6 @@ if witness:
     print(f"Achieved {len(partial)} integral variables")
     solution = [i+1 if witness[i] > 0 else -i-1 for i in range(len(partial))]
     print(solution)
-    # print(f"Restarts: {restarts}")
 
 else:
     breakpoint()
@@ -164,6 +128,6 @@ else:
 stop = time.time()
 print(f"Iterations executed: {it}; elapsed time: {stop-start:.3f} seconds")
 
-solver = CDCL_Solver(original_f, verbose=0)
+solver = Solver(original_f, verbose=0)
 solver.solve()
 
