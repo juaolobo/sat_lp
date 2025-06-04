@@ -1,4 +1,4 @@
-from cdcl.clause import Clause
+from boolean_solver.clause import Clause
 import numpy as np
 
 class Formula:

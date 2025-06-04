@@ -1,11 +1,9 @@
-from satlp import CNFLoader
-from satlp import (
+from cnf_loader import CNFLoader
+from linear_solver import (
     SATasLPOptimization,
     SATasLPFeasibility,
-    SATasMILPOptimization,
-    SATasMILPFeasibility
 )
-from cdcl import Solver
+from boolean_solver import Solver
 import numpy as np
 from scipy.optimize import linprog
 import random

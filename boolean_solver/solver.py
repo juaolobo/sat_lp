@@ -1,16 +1,18 @@
 import numpy as np
 import random
 import time
-from cdcl.clause import Clause
-from cdcl.formula import Formula
-from cdcl.implication_graph import ImplicationGraph
-from cdcl.dimacs_parser import parse
+from boolean_solver.clause import Clause
+from boolean_solver.formula import Formula
+from boolean_solver.implication_graph import ImplicationGraph
+from cnf_loader import CNFLoader
 
 class Solver: 
-    def __init__(self, input_cnf_file, verbose):
+    def __init__(self, filename, verbose):
         self.assert_mode = False
         self.verbose = verbose
-        self.list_clause, self.nvars = parse(input_cnf_file, self.verbose)
+        self.cnf_handler = CNFLoader(filename)
+        self.list_clause = self.cnf_handler.clauses
+        self.nvars = self.cnf_handler.n_vars
         self.formula = Formula(self.list_clause)
         self.graph = ImplicationGraph()
         self.decision_level = 0
