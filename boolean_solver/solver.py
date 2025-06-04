@@ -27,7 +27,6 @@ class Solver:
         self.conflict = None
     
     def restart(self):
-        # TODO : Implement other restart mechanisms
         self.formula = Formula(self.list_clause)
         self.graph = ImplicationGraph()
         
@@ -55,18 +54,8 @@ class Solver:
         return w, w.get_backtrack_level()
 
     def pick_branching_variable(self):
-        
-        # if len(self.hypotheses) > 0:
-        #     idx = np.random.choice(range(len(self.hypotheses)), replace=False)
-        #     decision = self.hypotheses.pop(idx)
-        #     if (decision in self.graph.assigned_vars) or (-decision in self.graph.assigned_vars):
-        #         return self.pick_branching_variable()
-        #     else:
-        #         return decision
 
-        # else: 
         ## Most frequent var first
-        # counter = self.formula.get_counter()
         counter = {}
         for clause in self.formula.formula:
             for literal in clause.clause[:clause.size]:
@@ -77,7 +66,6 @@ class Solver:
         assert len(counter) > 0
 
         pool_literal = list(counter.keys())
-        # pool_literal = sorted(list(counter.keys()))
         decision = -1
         i = 0
         while i < len(pool_literal):
