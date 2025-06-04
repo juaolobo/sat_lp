@@ -6,7 +6,7 @@ from boolean_solver.formula import Formula
 from boolean_solver.implication_graph import ImplicationGraph
 from cnf_loader import CNFLoader
 
-class Solver: 
+class BooleanSolver: 
     def __init__(self, filename, verbose):
         self.assert_mode = False
         self.verbose = verbose
@@ -215,7 +215,6 @@ class Solver:
         return self.graph.assigned_vars, self.formula
 
     def extend_solution(self):
-        print("WELL")
         
         # assign variables to advance further in the problem (and generate conflicts)
         while self.is_sat == 0:
