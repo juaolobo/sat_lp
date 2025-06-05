@@ -74,6 +74,8 @@ class BooleanSolver:
 
         assert decision not in self.graph.assigned_vars
         assert -decision not in self.graph.assigned_vars
+        decision = -decision if random.uniform(0, 1) >= 0.5 else decision
+
         return decision
 
     def is_all_assigned(self):

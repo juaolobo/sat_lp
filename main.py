@@ -8,7 +8,7 @@ np.random.seed(239)
 
 if __name__ == "__main__":
     n_vars = 20
-    cnf_idx = 10
+    cnf_idx = 4
     filename = f"formulas/cnfs/uf{n_vars}/uf{n_vars}-0{cnf_idx}.cnf"
 
     hyb_solver = HybridSolver(filename, SATasLPFeasibility)

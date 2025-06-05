@@ -58,7 +58,7 @@ class HybridSolver:
 
     @profile
     def solve(self):
-
+        it = 0
         witness = self.solve_linear()
         while not self.lp_solver.verify(witness):
             # i.e. INFEASIBLE
@@ -67,19 +67,30 @@ class HybridSolver:
                 return None
 
             fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer()}
+
+            # track solution history
             if self.track_history:
                 self.solution_history.append(fixing)
 
+            # if we hit a fixed point of the linear solver
             if fixing == self.fixing:
                 resolved = self.solve_boolean()
-                self.fixing = {abs(xi): 1.0 if xi > 0 else 0.0 for i, xi in enumerate(resolved)}
-                        
+                self.fixing = {abs(xi): 1.0 if xi > 0 else 0.0 for xi in resolved}
+
+            # else continue to evolve the linear solution
             else:
                 self.fixing = fixing
 
-            self.lp_solver.restart(fixing=self.fixing)
+            if it%100 == 0:
+                dimacs = [xi if ki else -xi for xi, ki in self.fixing.items()]
+                print(f"Current solution (iteration {it}): {dimacs}")
+
+            self.lp_solver.restart(fixing=self.fixing)                
             witness = self.solve_linear()
 
+            it += 1        
+
+        print(f"Finished in {it} iterations")
         return witness
 
     def verify(self, witness):
