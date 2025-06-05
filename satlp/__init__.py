@@ -1,3 +1,6 @@
+from numpy.random import seed
+seed(239)
+
 from satlp.hyb_solver import HybridSolver
 from satlp.linear_solver import SATasLPFeasibility, SATasLPOptimization
 from satlp.boolean_solver import BooleanSolver

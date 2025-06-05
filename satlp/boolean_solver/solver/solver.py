@@ -1,5 +1,4 @@
 import numpy as np
-import random
 import time
 from satlp.boolean_solver import Clause, Formula, ImplicationGraph
 from satlp.cnf_loader import CNFLoader
@@ -74,7 +73,7 @@ class BooleanSolver:
 
         assert decision not in self.graph.assigned_vars
         assert -decision not in self.graph.assigned_vars
-        decision = -decision if random.uniform(0, 1) >= 0.5 else decision
+        decision = -decision if np.random.uniform(0, 1) >= 0.5 else decision
 
         return decision
 
