@@ -1,5 +1,3 @@
-import numpy as np
-
 class CNFLoader():
 
     def __init__(self, filename=None):
@@ -24,7 +22,6 @@ class CNFLoader():
 
         self.n_vars = n_variables
         self.m_clauses = len(clauses)
-        # self.clauses = np_array(clauses)
         self.clauses = clauses
 
     def load(self, filename):

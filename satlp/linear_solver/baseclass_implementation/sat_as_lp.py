@@ -1,6 +1,5 @@
-from linear_solver.sat_baseclass.sat_baseclass import SATasLPBaseclass
+from satlp.linear_solver.sat_baseclass.sat_baseclass import SATasLPBaseclass
 
-from ortools.linear_solver import pywraplp
 from scipy.optimize import linprog
 import numpy as np
 from abc import ABC, abstractmethod

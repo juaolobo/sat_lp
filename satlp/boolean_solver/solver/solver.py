@@ -1,8 +1,8 @@
 import numpy as np
 import random
 import time
-from boolean_solver import Clause, Formula, ImplicationGraph
-from cnf_loader import CNFLoader
+from satlp.boolean_solver import Clause, Formula, ImplicationGraph
+from satlp.cnf_loader import CNFLoader
 
 class BooleanSolver: 
     def __init__(self, filename, verbose):

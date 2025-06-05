@@ -1,4 +1,4 @@
-from linear_solver.baseclass_implementation import SATasLP
+from satlp.linear_solver.baseclass_implementation import SATasLP
 
 from scipy.optimize import linprog
 import numpy as np
