@@ -1,6 +1,5 @@
 from satlp.cnf_loader import CNFLoader
 
-from ortools.linear_solver import pywraplp
 from scipy.optimize import linprog
 import numpy as np
 from abc import ABC, abstractmethod
