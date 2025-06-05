@@ -1,4 +1,4 @@
-from boolean_solver.clause import Clause
+from boolean_solver.cnf_structs.clause import Clause
 import numpy as np
 
 class Formula:

@@ -1,9 +1,7 @@
 import numpy as np
 import random
 import time
-from boolean_solver.clause import Clause
-from boolean_solver.formula import Formula
-from boolean_solver.implication_graph import ImplicationGraph
+from boolean_solver import Clause, Formula, ImplicationGraph
 from cnf_loader import CNFLoader
 
 class BooleanSolver: 

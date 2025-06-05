@@ -1,4 +1,3 @@
+from boolean_solver.cnf_structs import Clause, Formula
+from boolean_solver.implication_graph import ImplicationGraph
 from boolean_solver.solver import BooleanSolver
-from boolean_solver.clause import Clause
-from boolean_solver.utils import create_parser
-from boolean_solver.formula import Formula
