@@ -5,8 +5,6 @@ class ImplicationGraph:
         self.assigned_vars = []
         
     def add_node(self, literal, antecedent, decision_level):
-        if literal in self.assigned_vars or -literal in self.assigned_vars:
-            breakpoint()
         assert literal not in self.assigned_vars
         assert -literal not in self.assigned_vars
         self.graph[literal] = [antecedent, decision_level]

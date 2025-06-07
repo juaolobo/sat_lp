@@ -56,13 +56,9 @@ class Clause:
         self.clause = self.clause[-self.size:] + self.clause[:-self.size]
         self.decision_level = self.decision_level[-self.size:] + self.decision_level[:-self.size]
 
-        # self.indexA = self.clause.index(self.refA)
-        # self.indexB = self.clause.index(self.refB)
 
-    def check_n_update(self, graph):
-        # print('Before check')
-        # self.print_info()
-        # assert self.size > 0
+    def check_update(self, graph):
+
         assigned_vars = graph.assigned_vars
         sat_dl = []
         for i in range(len(self.clause)):
@@ -109,7 +105,6 @@ class Clause:
     def bcp(self, literal, decision_level, graph):
         assert self.size >= 0
         assert self.size == self.decision_level.count(-1)
-        # Lazy clause is visited only when Var(litteral) is Var(refA) or Var(refB)
         # Case 1: size == 0, all literals are assigned ! check its value
         if self.size == 0: 
             assert self.value != 0
@@ -134,7 +129,7 @@ class Clause:
         elif self.size > 1:
 
             assert self.value == 0
-            self.check_n_update(graph)
+            self.check_update(graph)
 
         assert self.size == self.decision_level.count(-1)
 
@@ -215,8 +210,10 @@ class Clause:
                     break
                 elif l in res:
                     continue
+
         if len(res) == 0:
-            breakpoint()
+            return None
+
         resolved_clause = Clause(res)
         resolved_clause.set_decision_levels(dl)
         resolved_clause.size = resolved_clause.decision_level.count(-1)

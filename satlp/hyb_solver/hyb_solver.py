@@ -44,10 +44,20 @@ class HybridSolver:
 
         self.bool_solver.restart()
         resolved, formula = self.bool_solver.propagate_linear(linear_sol)
+
+        # UNSAT
+        if formula is None:
+            return None
+
         new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
 
         if len(new_clauses) == 0:
             resolved, formula = self.bool_solver.extend_solution()
+
+            # UNSAT
+            if formula is None:
+                return None
+
             new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
 
         for c in new_clauses:
@@ -75,6 +85,11 @@ class HybridSolver:
             # if we hit a fixed point of the linear solver
             if fixing == self.fixing:
                 resolved = self.solve_boolean()
+
+                # UNSAT
+                if resolved is None:
+                    return None
+                    
                 self.fixing = {abs(xi): 1.0 if xi > 0 else 0.0 for xi in resolved}
 
             # else continue to evolve the linear solution
@@ -84,6 +99,8 @@ class HybridSolver:
             if it%100 == 0:
                 dimacs = [xi if ki else -xi for xi, ki in self.fixing.items()]
                 print(f"Current solution (iteration {it}): {dimacs}")
+                print(f"Current number of clauses {self.lp_solver.m_clauses()}")
+                print(f"----------------------------------------------------")
 
             self.lp_solver.restart(fixing=self.fixing)                
             witness = self.solve_linear()

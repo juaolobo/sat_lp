@@ -110,6 +110,7 @@ class Formula:
 
             elif clause.value == 1:
                 continue
+                
         self.value = self.get_value()
             
         return self.value, conflict_clause

@@ -5,7 +5,6 @@ from satlp.cnf_loader import CNFLoader
 
 class BooleanSolver: 
     def __init__(self, filename, verbose):
-        self.assert_mode = False
         self.verbose = verbose
         self.cnf_handler = CNFLoader(filename)
         self.list_clause = self.cnf_handler.clauses
@@ -45,6 +44,9 @@ class BooleanSolver:
 
             if antecedent is not None:
                 w = w.resolution_operate(antecedent, conflict_literal)
+                if w is None:
+                    return None, -1
+
                 pool_literal = w.clause
                 i = 0
 
@@ -165,13 +167,15 @@ class BooleanSolver:
 
         _linear_sol = linear_sol
         self.is_sat, self.conflict =  self.formula.unit_propagate(self.decision_level, self.graph)
+
         for lit in _linear_sol:
-            self.graph.add_node(lit, None, 0)
-            self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
-            if self.is_sat != 0:
-                # leave this here if it ever happens
-                print("SUPRISE MOTHERFUCKER")
-                break
+            if lit not in self.graph.assigned_vars:
+                self.graph.add_node(lit, None, 0)
+                self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
+                if self.is_sat != 0:
+                    # leave this here if it ever happens
+                    print("SUPRISE MOTHERFUCKER")
+                    break
 
         self.is_sat, self.conflict = self.formula.unit_propagate(1, self.graph)
         self.decision_level += 1
@@ -198,7 +202,13 @@ class BooleanSolver:
 
             # solve conflict
             while self.is_sat == -1:
+
                 learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
+
+                # detected unsolvable conflict => UNSAT
+                if learnt_clause is None:
+                    return None, None
+                    
                 self.formula.add_clause(learnt_clause)
                 self.graph.backtrack(backtrack_level)
                 self.formula.backtrack(backtrack_level, self.graph)
@@ -209,6 +219,7 @@ class BooleanSolver:
                 _linear_sol = [xi for xi in _linear_sol if -xi not in learnt_clause.clause]
 
                 self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+
 
         # return once there are no deductions to be made and all conflicts have been resolved
         return self.graph.assigned_vars, self.formula
@@ -227,6 +238,10 @@ class BooleanSolver:
         while self.is_sat == -1:
 
             learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
+            # detected unsolvable conflict => UNSAT
+            if learnt_clause is None:
+                return None, None
+
             self.formula.add_clause(learnt_clause)
             self.graph.backtrack(backtrack_level)
             self.formula.backtrack(backtrack_level, self.graph)

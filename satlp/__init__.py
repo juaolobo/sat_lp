@@ -1,5 +1,5 @@
 from numpy.random import seed
-seed(239)
+# seed(21)
 
 from satlp.hyb_solver import HybridSolver
 from satlp.linear_solver import SATasLPFeasibility, SATasLPOptimization
