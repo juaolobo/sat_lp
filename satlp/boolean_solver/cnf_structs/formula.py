@@ -60,10 +60,11 @@ class Formula:
     def is_sat(self):
         return self.value
     
-    def simplify_pair(self, pair, graph, decision_level):
+    def simplify_pair(self, pair_idx, graph, decision_level):
 
         assigned_vars = graph.assigned_vars
-        for cl in self.formula:
+        pair = self.formula[pair_idx]
+        for cl in self.formula[pair_idx:]:
             if cl.size == 2:
                 if cl != pair:
                     _cl = np.array(sorted(cl.clause[:cl.size], key=abs))

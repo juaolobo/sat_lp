@@ -187,9 +187,10 @@ class BooleanSolver:
 
             # simplify all possible clauses by deduction ([~p, q], [p, q] -> q)
             m_simpl = 0
-            for c in self.formula.formula:
+            for i in range(m_clauses):
+                c = self.formula.formula[i]
                 if c.size == 2:
-                    inf, clause = self.formula.simplify_pair(c, self.graph, self.decision_level)
+                    inf, clause = self.formula.simplify_pair(i, self.graph, self.decision_level)
                     if inf is not None and clause is not None:
                         self.graph.add_node(inf, clause, self.decision_level)
                         self.is_sat, self.conflict = self.formula.bcp(inf, self.decision_level, self.graph)
