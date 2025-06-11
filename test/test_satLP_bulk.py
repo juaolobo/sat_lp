@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/home/juaolobo/MASTER/sat_lp')
+
 from satlp import SATasLPFeasibility, SATasLPOptimization
 from tqdm import tqdm
 from itertools import combinations
@@ -63,14 +66,14 @@ def _worker_simple(cmb):
     n_fixed = len(fixing)
     lp_obj = SATasLPFeasibility(filename=filename, fixing=fixing, method=method)
     lp_obj.create_lp()
-    status, res, witness = lp_obj.solve()
+    witness = lp_obj.solve()
 
-    if s == lp_obj.solver.INFEASIBLE:
-        row = ["INFEASIBLE", False, [], n_fixed, fixing]
+    if not witness:
+        row = ["INFEASIBLE", [], n_fixed, fixing]
 
     else:
         ok = lp_obj.verify(witness)
-        row = [res, ok, witness, n_fixed, fixing]
+        row = [ok, witness, n_fixed, fixing]
     
     return row
 
@@ -80,9 +83,9 @@ def _worker(cmb):
     n_fixed = len(fixing)
     lp_obj = SATasLPOptimization(filename=filename, fixing=fixing, method=method)
     lp_obj.create_lp()
-    status, res, witness = lp_obj.solve()
+    witness = lp_obj.solve()
     ok = lp_obj.verify(witness)
-    row = [res, ok, witness, n_fixed, fixing]
+    row = [ok, witness, n_fixed, fixing]
     
     return row
 
@@ -105,23 +108,24 @@ if __name__ == "__main__":
     solution_file = args.solution_file
     no_ext = args.file.split("/")[-1][:-4]
     n_vars = args.n_vars
-    global method = args.method
+    method = args.method
 
+    method_str = "simplex" if method == "highs-ds" else "ipm"
     if lp_type == "feasibility":
         worker_fn = _worker_simple
-        experiments_file = f"experiments/data/{no_ext}-simplex-feasibility.csv"
+        experiments_file = f"experiments/data/{no_ext}-{method_str}-feasibility.csv"
 
     elif lp_type == "optimization":
-        worker_fn = _worker_simple
-        experiments_file = f"experiments/data/{no_ext}-simplex-optimization.csv"
+        worker_fn = _worker
+        experiments_file = f"experiments/data/{no_ext}-{method_str}-optimization.csv"
 
     with open(solution_file, "r") as f:
-        solution = [int(xi) for xi in f.read().split()[1:-1]]
+        solution = [int(xi) for xi in f.readlines()[0].split()[1:-1]]
 
     with open(experiments_file, "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
-        columns = ['result','is_solution','witness', 'n_fixed', 'fixing']
+        columns = ['result','witness', 'n_fixed', 'fixing']
         writer.writerow(columns)
 
         all_vars = range(1, n_vars+1)

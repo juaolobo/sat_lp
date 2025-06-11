@@ -10,7 +10,7 @@ if len(sys.argv) < 2:
 filename = f"experiments/data/{sys.argv[1]}.csv"
 df = pd.read_csv(filename)
 n_vars = df["n_fixed"].max()
-ncvg = df[df["is_solution"] == False]
+ncvg = df[df["result"] == False]
 
 # rank vars that lead to most trouble after relaxation
 fixed = ncvg[["fixing", "n_fixed"]]

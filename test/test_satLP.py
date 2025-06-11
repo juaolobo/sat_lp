@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/home/juaolobo/MASTER/sat_lp')
+
 from satlp import SATasLPFeasibility
 from tqdm import tqdm
 from itertools import combinations
@@ -108,7 +111,7 @@ if __name__ == "__main__":
     n_vars = args.n_vars
     n_fixed_vars = args.n_fixed_vars
     batch_size = args.batch_size
-    global method = args.method
+    method = args.method
 
     with open(solution_file, "r") as f:
         solution = [int(xi) for xi in f.read().split()[1:-1]]

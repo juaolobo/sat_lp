@@ -13,12 +13,13 @@ def addlabels(x,y):
 if len(sys.argv) < 2:
     exit(0)
 
-filename = f"experiments/{sys.argv[1]}.csv"
+filename = f"experiments/data/{sys.argv[1]}.csv"
 figsize=(13, 8)
 df = pd.read_csv(filename)
-cvg = df[df["is_solution"] == True]
-ncvg = df[df["is_solution"] == False]
+cvg = df[df["result"] == True]
+ncvg = df[df["result"] == False]
 
+breakpoint()
 # rank vars that lead to most trouble after relaxation
 relaxed_vars = ncvg["relaxed_vars"].apply(literal_eval)
 ranked_vars = pd.DataFrame(relaxed_vars.explode().value_counts())

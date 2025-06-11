@@ -12,6 +12,7 @@ def addlabels(x,y):
         plt.text(i, y[i] + delta, round(y[i], 2), ha = 'center', parse_math=True, bbox=props)
 
 if len(sys.argv) < 2:
+    print("MISSING ARGUMENTS")
     exit(0)
 
 dir_path = f"./figs/{sys.argv[1]}"
@@ -28,11 +29,15 @@ df_len = pd.read_csv(filename_len).set_index("n_fixed")
 fig = plt.figure(figsize=figsize)
 df_vars["pct"].plot(kind='bar', title='Percentage of times that fixing variables lead to divergent solution')
 addlabels(df_vars.index, df_vars["pct"].values)
+ax = plt.gca()
+ax.set_ylim(0,1)
 plt.savefig(f"{dir_path}/{sys.argv[1]}-non_convergent_vars.png")
 
 fig = plt.figure(figsize=figsize)
 df_len["pct"].plot(kind='bar', title="Number of fixed variables in divergent solution")
 addlabels(df_len.index, df_len["pct"].values)
+ax = plt.gca()
+ax.set_ylim(0,1)
 plt.savefig(f"{dir_path}/{sys.argv[1]}-non_convergent_len.png")
 
 
