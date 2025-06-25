@@ -1,21 +1,56 @@
 import numpy as np
 import random
-import os
 import time
-from satlp import HybridSolver, SATasLPFeasibility, BooleanSolver
+import argparse, sys
+
+from satlp import HybridSolver, BooleanSolver, SATasLPFeasibility, SATasLPOptimization
+
+def create_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-m", 
+        "--method",
+        required=False,
+        default="highs-ipm",
+        type=str,
+        help="'highs-ds'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
+    )
+
+    parser.add_argument(
+        "-f", 
+        "--input_file",
+        required=True,
+        type=str,
+        help="Input files."
+    )
+
+    parser.add_argument(
+        "-t", 
+        "--type",
+        required=False,
+        default="optimization",
+        type=str,
+        help="'optimization'= Use absolute value formulation. 'feasibility' = Use simple formulation without obj function."
+    )
+
+    return parser
+
 
 if __name__ == "__main__":
-    n_vars = 100
-    cnf_idx = 4
-    filename = f"formulas/cnfs/uf{n_vars}/uf{n_vars}-0{cnf_idx}.cnf"
 
+    cmd_parser = create_parser()
+    if len(sys.argv) < 2:
+        cmd_parser.print_help()
+        exit(0)
+
+    args = cmd_parser.parse_args()
+
+    filename = args.input_file
+    method = args.method
+    lp_solver =  SATasLPOptimization if args.type == "optimization" else SATasLPFeasibility
     start = time.time()
-    hyb_solver = HybridSolver(filename, SATasLPFeasibility)
+    hyb_solver = HybridSolver(filename, lp_solver, method=method)
     witness = hyb_solver.solve()
     stop = time.time()
-    print(f"Elapsed time: {start - stop}s")
+    print(f"Elapsed time: {stop - start}s")
     hyb_solver.verify(witness)
-
-    sat_solver = BooleanSolver(filename, verbose=0)
-    sat_solver.solve()
-
