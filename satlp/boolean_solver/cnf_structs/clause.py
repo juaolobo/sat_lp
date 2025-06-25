@@ -49,13 +49,11 @@ class Clause:
         self.size = self.decision_level.count(-1)
         if self.size == 0 and len(sat_dl) == 0:
             self.value = -1
-        
 
         self.clause = [x for _,x in sorted(zip(self.decision_level,self.clause), reverse=True)]
         self.decision_level.sort(reverse=True)
         self.clause = self.clause[-self.size:] + self.clause[:-self.size]
         self.decision_level = self.decision_level[-self.size:] + self.decision_level[:-self.size]
-
 
     def check_update(self, graph):
 

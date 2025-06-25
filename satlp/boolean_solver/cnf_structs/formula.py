@@ -113,7 +113,7 @@ class Formula:
                 continue
                 
         self.value = self.get_value()
-            
+
         return self.value, conflict_clause
             
     def unit_propagate(self, decision_level, graph=None):
@@ -131,11 +131,13 @@ class Formula:
 
                 if is_sat == -1:
                     self.value == -1
+
                 else:
                     self.value, conflict_clause = self.unit_propagate(decision_level, graph) 
                     break
             else: 
                 i += 1
+
         return self.value, conflict_clause
 
     def backtrack(self, backtrack_level, graph):

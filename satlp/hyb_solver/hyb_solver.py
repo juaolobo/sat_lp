@@ -7,10 +7,10 @@ from line_profiler import profile
 
 class HybridSolver:
 
-    def __init__(self, filename, lp_solver, solutions='', track_history=False):
+    def __init__(self, filename, lp_solver, method='highs-ipm', solutions='', track_history=False):
 
         self.fixing = {}
-        self.lp_solver = lp_solver(fixing=self.fixing, filename=filename, method='highs-ipm')
+        self.lp_solver = lp_solver(fixing=self.fixing, filename=filename, method=method)
         self.bool_solver = BooleanSolver(filename, verbose=0)
         self.track_history = track_history
         self.solution_history = []
@@ -108,15 +108,21 @@ class HybridSolver:
             it += 1        
 
         print(f"Finished in {it} iterations")
+
         return witness
 
     def verify(self, witness):
-        if witness:
-            if self.lp_solver.verify(witness):
-                print("SATISFIABLE")
-                linear_sol = [i+1 if xi == 1 else -i-1 for i,xi in enumerate(witness)]
-                print(f"WITNESS: {linear_sol}")
         
-        else: print("UNSATISFIABLE")
+        sat = False
+        if witness:
+            sat = self.lp_solver.verify(witness)
+            if sat:
+                print("SATISFIABLE")
+                witness = self.lp_solver.linear_to_witness(witness)
+                print(f"WITNESS: {witness}")
+                        
+            else: print("UNSATISFIABLE")
+
+        return sat
 
 

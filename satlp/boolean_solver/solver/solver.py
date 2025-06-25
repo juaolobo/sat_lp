@@ -21,7 +21,13 @@ class BooleanSolver:
         self.restart_rate = 100
         self.is_sat = 0 
         self.conflict = None
-    
+
+    def witness_to_linear(self, witness):
+        witness = sorted(witness, key=abs)
+        solution = [1 if xi > 0 else 0 for xi in witness]
+
+        return solution
+
     def restart(self):
         self.formula = Formula(self.list_clause)
         self.graph = ImplicationGraph()
@@ -99,6 +105,7 @@ class BooleanSolver:
             self.decision_level += 1
             self.graph.add_node(decision, None, self.decision_level)
             self.is_sat, self.conflict = self.formula.bcp(decision, self.decision_level, self.graph)
+
             if self.is_sat == 0:
                 assert not self.is_all_assigned()
                 self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
@@ -126,7 +133,6 @@ class BooleanSolver:
                     self.formula.backtrack(backtrack_level, self.graph)
                     self.decision_level = backtrack_level
                     self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
-
                     if self.is_sat == 0: 
                         assert not self.is_all_assigned()
 
@@ -147,7 +153,8 @@ class BooleanSolver:
         print('Decisions: ', self.nb_decisions)
         print('CPU time: {0:10.6f}s '.format(time.time()-initial_time))
         
-        witness = None
+        witness = self.graph.assigned_vars
+
         if stop: 
             assert self.is_sat == -1
             print('UNSAT')
@@ -159,8 +166,13 @@ class BooleanSolver:
         else: #But practically, this should not happen !
             print('UNRESOLVED !')
         
+        # solution was found without assigning all variable
+        if len(witness) < self.nvars:
+            for xi in range(1, self.nvars+1):
+                if xi not in witness and -xi not in witness:
+                    witness.append(xi)
 
-        return self.formula.get_value, witness    
+        return witness    
             
 
     def propagate_linear(self, linear_sol):

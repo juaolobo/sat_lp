@@ -37,11 +37,6 @@ class SATasLPFeasibility(SATasLP):
     def _create_optimization(self):
         self.bounds = [0,1]
 
-    def restart(self, fixing={}):
-        self.fixing = fixing
-        self._init_objects()
-        self._create_optimization()
-
 
 class SATasLPOptimization(SATasLP):
 

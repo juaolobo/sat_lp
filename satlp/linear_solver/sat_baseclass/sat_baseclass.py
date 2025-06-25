@@ -44,10 +44,10 @@ class SATasLPBaseclass(ABC):
     def solve(self):
         pass
 
-    def verify(self, witness):
+    def verify(self, witness, translate=False):
+
         clauses = self.clauses()
         witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in witness])
-
         for c in clauses:
             abs_c = np.abs(c) 
             idx = abs_c - 1
@@ -57,6 +57,10 @@ class SATasLPBaseclass(ABC):
                 return False
 
         return True
+
+    def linear_to_witness(self, witness):
+        solution = [i+1 if xi == 1 else -i-1 for i,xi in enumerate(witness)]
+        return solution
 
     def verify_partial(self, partial_witness):
 
@@ -91,5 +95,10 @@ class SATasLPBaseclass(ABC):
     def create_lp(self, filename=None):
         if filename:
             self.load_cnf(filename)
+        self._init_objects()
+        self._create_optimization()
+
+    def restart(self, fixing={}):
+        self.fixing = fixing
         self._init_objects()
         self._create_optimization()
