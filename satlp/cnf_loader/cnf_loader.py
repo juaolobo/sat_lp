@@ -4,6 +4,7 @@ class CNFLoader():
         self.n_vars = None
         self.m_clauses = None
         self.clauses = None
+        self.learnt_clauses = 0
         if filename:
             self._load_from_file(filename)
 
@@ -32,3 +33,7 @@ class CNFLoader():
                 print("Something went wrong loading the file. Make sure it is in DIMCAS formats.")
 
         return inf_assignments        
+
+    def add_clause(self, clause):
+        self.clauses.append(clause)
+        self.m_clauses += 1

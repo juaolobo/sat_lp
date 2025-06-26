@@ -3,6 +3,7 @@ from satlp.linear_solver import (
     SATasLPFeasibility,
 )
 from satlp.boolean_solver import BooleanSolver
+from satlp.cnf_loader import CNFLoader
 from line_profiler import profile
 
 class HybridSolver:
@@ -10,8 +11,9 @@ class HybridSolver:
     def __init__(self, filename, lp_solver, method='highs-ipm', solutions='', track_history=False):
 
         self.fixing = {}
-        self.lp_solver = lp_solver(fixing=self.fixing, filename=filename, method=method)
-        self.bool_solver = BooleanSolver(filename, verbose=0)
+        self.cnf_handler = CNFLoader(filename)
+        self.lp_solver = lp_solver(fixing=self.fixing, filename=filename, method=method, cnf_handler=self.cnf_handler)
+        self.bool_solver = BooleanSolver(filename, verbose=0, cnf_handler=self.cnf_handler)
         self.track_history = track_history
         self.solution_history = []
 
@@ -42,7 +44,6 @@ class HybridSolver:
         # assert fixing = self.fixing
         linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
 
-        self.bool_solver.restart()
         resolved, formula = self.bool_solver.propagate_linear(linear_sol)
 
         # UNSAT
@@ -61,8 +62,10 @@ class HybridSolver:
             new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
 
         for c in new_clauses:
-            self.lp_solver.add_clause(c)
-            self.bool_solver.list_clause.append(c)
+            self.cnf_handler.add_clause(c)
+            self.cnf_handler.learnt_clauses += 1
+
+        self.bool_solver.restart()
 
         return resolved
 

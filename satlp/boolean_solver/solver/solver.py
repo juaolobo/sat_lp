@@ -4,9 +4,9 @@ from satlp.boolean_solver import Clause, Formula, ImplicationGraph
 from satlp.cnf_loader import CNFLoader
 
 class BooleanSolver: 
-    def __init__(self, filename, verbose):
+    def __init__(self, filename, verbose, cnf_handler=None):
         self.verbose = verbose
-        self.cnf_handler = CNFLoader(filename)
+        self.cnf_handler = cnf_handler if cnf_handler is not None else CNFLoader(filename)
         self.list_clause = self.cnf_handler.clauses
         self.nvars = self.cnf_handler.n_vars
         self.formula = Formula(self.list_clause)
@@ -128,6 +128,7 @@ class BooleanSolver:
                     stop = True
                 else:
                     self.formula.add_clause(learnt_clause)
+                    self.cnf_handler.add_clause(learnt_clause.clause)
                     self.nb_learnt_clause += 1
                     self.graph.backtrack(backtrack_level)
                     self.formula.backtrack(backtrack_level, self.graph)

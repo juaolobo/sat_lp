@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 
 class SATasLPBaseclass(ABC):
 
-    def __init__(self, filename=None):
-        self.cnf_handler = CNFLoader(filename)
+    def __init__(self, filename=None, cnf_handler=None):
+        self.cnf_handler = cnf_handler if cnf_handler is not None else CNFLoader(filename)
 
     @abstractmethod
     def _init_objects(self):
@@ -36,10 +36,6 @@ class SATasLPBaseclass(ABC):
 
     def round(self, x):
         return [self._round(xi) for xi in x]
-
-    def add_clause(self, clause):
-        self.cnf_handler.clauses.append(clause)
-        self.cnf_handler.m_clauses += 1
 
     def solve(self):
         pass

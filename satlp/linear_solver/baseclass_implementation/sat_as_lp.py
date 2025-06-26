@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 
 class SATasLP(SATasLPBaseclass):
 
-    def __init__(self, filename=None, method=None):
-        super().__init__(filename)
+    def __init__(self, filename=None, cnf_handler=None, method=None):
+        super().__init__(filename, cnf_handler)
         self.solver = linprog
         self.g = lambda x: 1 - self.fixing[abs(x)] if x < 0 else self.fixing[abs(x)]
         self.A_ub = None

@@ -54,3 +54,7 @@ if __name__ == "__main__":
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")
     hyb_solver.verify(witness)
+
+
+    sat_solver = BooleanSolver(filename, verbose=0)
+    sat_solver.solve()

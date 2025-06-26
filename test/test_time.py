@@ -66,10 +66,13 @@ def _worker_feas(args):
     bool_start = time()
     bool_witness = sat_solver.solve()
     bool_stop = time()
-    
+
     ok_hyb = hyb_solver.verify(hyb_witness)
     bool_witness = sat_solver.witness_to_linear(bool_witness)
     ok_bool = sat_solver.verify(bool_witness)
+
+    hyb_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness)]
+    bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)]
 
     elapsed_hyb = hyb_stop - hyb_start
     elapsed_bool = bool_stop - bool_start
@@ -77,7 +80,7 @@ def _worker_feas(args):
     print(f"Elapsed time for our method: {elapsed_hyb}; elapsed time for CDCL: {elapsed_bool}")
     print(f"Finished file {name}")
     print("-------------------------------------------------------")
-    row = [name, elapsed_hyb, elapsed_bool, hyb_witness, bool_witness]
+    row = [name, elapsed_hyb, elapsed_bool, n_learned_hyb, n_learned_bool, hyb_witness, bool_witness]
 
     return row
 
@@ -88,7 +91,7 @@ def _worker_opt(args):
 
     hyb_solver = HybridSolver(file, SATasLPOptimization, method=method)
     hyb_start = time()
-    hyb_witness = hyb_solver.solve()
+    hyb_witness = hyb_solver.solve()[:hyb_solver.lp_solver.n_vars()]
     hyb_stop = time()
     sat_solver = BooleanSolver(file, verbose=0)
     bool_start = time()
@@ -99,13 +102,20 @@ def _worker_opt(args):
     bool_witness = sat_solver.witness_to_linear(bool_witness)
     ok_bool = hyb_solver.verify(bool_witness)
 
+    hyb_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness)]
+    bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)]
+
+    n_learned_bool = sat_solver.nb_learnt_clause 
+    n_learned_hyb = hyb_solver.cnf_handler.learnt_clauses
     elapsed_hyb = hyb_stop - hyb_start
     elapsed_bool = bool_stop - bool_start
     name = file.split("/")[-1]
+
     print(f"Elapsed time for our method: {elapsed_hyb}; elapsed time for CDCL: {elapsed_bool}")
     print(f"Finished file {name}")
     print("-------------------------------------------------------")
-    row = [name, elapsed_hyb, elapsed_bool, hyb_witness, bool_witness]
+
+    row = [name, elapsed_hyb, elapsed_bool, n_learned_hyb, n_learned_bool, hyb_witness, bool_witness]
 
     return row
 
@@ -134,16 +144,16 @@ if __name__ == "__main__":
 
     if lp_type == "feasibility":
         worker_fn = _worker_feas
-        experiments_file = f"experiments/data/integral_conv/uf{n_vars}-feasibility-{method}.csv"
+        experiments_file = f"experiments/data/time/uf{n_vars}-feasibility-{method}.csv"
 
     elif lp_type == "optimization":
         worker_fn = _worker_opt
-        experiments_file = f"experiments/data/integral_conv/uf{n_vars}-optimization-{method}.csv"
+        experiments_file = f"experiments/data/time/uf{n_vars}-optimization-{method}.csv"
 
     with open(experiments_file, "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
-        columns = ['name', 'elapsed_hyb','elapsed_bool','witness_hyb', 'witness_hyb']
+        columns = ['name', 'elapsed_hyb','elapsed_bool', 'n_learned_hyb', 'n_learned_bool', 'witness_hyb', 'witness_hyb']
         writer.writerow(columns)
 
         with mp.Pool(n_processes) as p:

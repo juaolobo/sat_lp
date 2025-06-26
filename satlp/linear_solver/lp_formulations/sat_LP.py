@@ -7,9 +7,9 @@ import numpy as np
 
 class SATasLPFeasibility(SATasLP):
 
-    def __init__(self, filename=None, fixing={}, method='highs-ipm'):
+    def __init__(self, filename=None, cnf_handler=None, fixing={}, method='highs-ipm'):
         self.fixing = fixing
-        super().__init__(filename, method)
+        super().__init__(filename, cnf_handler, method)
 
     def _init_objects(self):
         
@@ -40,9 +40,9 @@ class SATasLPFeasibility(SATasLP):
 
 class SATasLPOptimization(SATasLP):
 
-    def __init__(self, filename=None, fixing={}, method='highs-ipm'):
+    def __init__(self, filename=None, cnf_handler=None, fixing={}, method='highs-ipm'):
         self.fixing = fixing
-        super().__init__(filename, method)
+        super().__init__(filename, cnf_handler, method)
 
     def _init_objects(self):
         
