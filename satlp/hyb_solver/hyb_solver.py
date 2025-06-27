@@ -100,10 +100,12 @@ class HybridSolver:
                 self.fixing = fixing
 
             if it%100 == 0:
-                dimacs = [xi if ki else -xi for xi, ki in self.fixing.items()]
+                items = [(k,v) for k,v in self.fixing.items() if k < self.lp_solver.n_vars()]
+                dimacs = [xi if vi else -xi for xi, vi in items]
                 print(f"Current solution (iteration {it}): {dimacs}")
                 print(f"Current number of clauses {self.lp_solver.m_clauses()}")
                 print(f"----------------------------------------------------")
+                self.fixing = {}
 
             self.lp_solver.restart(fixing=self.fixing)                
             witness = self.solve_linear()
@@ -122,7 +124,7 @@ class HybridSolver:
             if sat:
                 print("SATISFIABLE")
                 witness = self.lp_solver.linear_to_witness(witness)
-                print(f"WITNESS: {witness}")
+                print(f"WITNESS: {witness[:self.lp_solver.n_vars()]}")
                         
             else: print("UNSATISFIABLE")
 
