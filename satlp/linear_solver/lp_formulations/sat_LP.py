@@ -47,10 +47,10 @@ class SATasLPOptimization(SATasLP):
     def _init_objects(self):
         
         # Ax <= y
-        y_lb = np.zeros(shape=self.m_clauses())
+        y_lb = np.zeros(shape=self.m_clauses() + self.n_vars())
         A_lb = np.zeros(shape=(self.m_clauses() + self.n_vars(), 3*self.n_vars()))
 
-        y_eq = np.zeros(shape=self.n_vars())
+        y_eq = np.zeros(shape=2*self.n_vars())
         A_eq = np.zeros(shape=(2*self.n_vars(), 3*self.n_vars()))
 
         # construct matrices following Ax >= y
@@ -70,28 +70,28 @@ class SATasLPOptimization(SATasLP):
         A_ub = -A_lb
 
         n = self.n_vars()
-        m = self.m_clauses
+        m = self.m_clauses()
 
-        # y+ + y- = 1/2
+        # optimization
         for i in range(n):
             if i+1 not in self.fixing.keys():
+                # y+ + y- = 1/2
                 A_eq[i][n+i] = 1
                 A_eq[i][2*n+i] = 1
                 y_eq[i] = 1/2
 
-        # optimization
-        # x_i + y_n+i - y_2n+i = 1/2
-        for i in range(self.n_vars()):
-            if i+1 not in self.fixing.keys():
+                # x_i + y_n+i - y_2n+i = 1/2
                 A_eq[n+i][i] = 1
                 A_eq[n+i][n+i] = 1
                 A_eq[n+i][2*n+i] = -1
                 y_eq[n+i] = 1/2
 
+                # x_i - y_n+i - y_2n+i <= 1/2
                 A_ub[m+i][i] = 1
                 A_ub[m+i][n+i] = -1
                 A_ub[m+i][2*n+i] = -1
                 y_ub[m+i] = 1/2
+
 
         c = -np.ones(3*self.n_vars())
         c[:n] = 0
