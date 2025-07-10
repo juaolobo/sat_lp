@@ -61,3 +61,4 @@ if __name__ == "__main__":
     print(witness[:hyb_solver.lp_solver.n_vars()])
     print(witness[hyb_solver.lp_solver.n_vars():2*hyb_solver.lp_solver.n_vars()])
     print(witness[2*hyb_solver.lp_solver.n_vars():])
+

@@ -4,7 +4,6 @@ from satlp.linear_solver import (
 )
 from satlp.boolean_solver import BooleanSolver
 from satlp.cnf_loader import CNFLoader
-from line_profiler import profile
 
 class HybridSolver:
 
@@ -16,6 +15,8 @@ class HybridSolver:
         self.bool_solver = BooleanSolver(filename, verbose=0, cnf_handler=self.cnf_handler)
         self.track_history = track_history
         self.solution_history = []
+        self.linear_it = 0
+        self.boolean_it = 0
 
     def check_solutions(self, solutions, solution):
         errors = []
@@ -32,15 +33,13 @@ class HybridSolver:
 
         return min_err, min_sol, wrong_idxs
 
-    @profile
     def solve_linear(self):
 
         self.lp_solver.create_lp()
         return self.lp_solver.solve()
 
-    @profile
     def solve_boolean(self):
-
+        
         # assert fixing = self.fixing
         linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
 
@@ -69,10 +68,10 @@ class HybridSolver:
 
         return resolved
 
-    @profile
     def solve(self):
         it = 0
         witness = self.solve_linear()
+        self.linear_it += 1
         while not self.lp_solver.verify(witness):
             # i.e. INFEASIBLE
             if witness == None:
@@ -81,18 +80,27 @@ class HybridSolver:
 
             fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer()}
 
-            # track solution history
-            if self.track_history:
-                self.solution_history.append(fixing)
-
             # if we hit a fixed point of the linear solver
             if fixing == self.fixing:
+                # track solution history
+                if self.track_history:
+                    sol = tuple([
+                            xi if self.fixing[xi] 
+                            else -xi 
+                            for xi in list(self.fixing.keys()) 
+                            if abs(xi) <= self.lp_solver.n_vars()
+                        ]
+                    )
+                    if len(sol) > 0:
+                        self.solution_history.append(sol)
+                    
                 resolved = self.solve_boolean()
+                self.boolean_it += 1
 
                 # UNSAT
                 if resolved is None:
                     return None
-                    
+                                                           
                 self.fixing = {abs(xi): 1.0 if xi > 0 else 0.0 for xi in resolved}
 
             # else continue to evolve the linear solution
@@ -105,15 +113,17 @@ class HybridSolver:
                 print(f"Current solution (iteration {it}): {dimacs}")
                 print(f"Current number of clauses {self.lp_solver.m_clauses()}")
                 print(f"----------------------------------------------------")
+
                 self.fixing = {}
 
             self.lp_solver.restart(fixing=self.fixing)                
             witness = self.solve_linear()
+            self.linear_it += 1
+
 
             it += 1        
 
         print(f"Finished in {it} iterations")
-
         return witness
 
     def verify(self, witness):

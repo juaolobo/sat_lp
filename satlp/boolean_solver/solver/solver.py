@@ -178,10 +178,9 @@ class BooleanSolver:
 
     def propagate_linear(self, linear_sol):
 
-        _linear_sol = linear_sol
         self.is_sat, self.conflict =  self.formula.unit_propagate(self.decision_level, self.graph)
 
-        for lit in _linear_sol:
+        for lit in linear_sol:
             if lit not in self.graph.assigned_vars:
                 self.graph.add_node(lit, None, 0)
                 self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
@@ -230,10 +229,7 @@ class BooleanSolver:
                     self.formula.repair(-xi, self.graph)
                     self.graph.remove_node(-xi)
 
-                _linear_sol = [xi for xi in _linear_sol if -xi not in learnt_clause.clause]
-
                 self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
-
 
         # return once there are no deductions to be made and all conflicts have been resolved
         return self.graph.assigned_vars, self.formula
