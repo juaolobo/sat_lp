@@ -28,15 +28,6 @@ def create_parser():
     )
 
     parser.add_argument(
-        "-t", 
-        "--type",
-        required=False,
-        default="optimization",
-        type=str,
-        help="'optimization'= Use absolute value formulation. 'feasibility' = Use simple formulation without obj function."
-    )
-
-    parser.add_argument(
         "-n", 
         "--n_vars", 
         required=True,
@@ -54,68 +45,69 @@ def create_parser():
 
     return parser
 
-def _worker_feas(args):
+def _worker(args):
 
     file, method = args
 
-    hyb_solver = HybridSolver(file, SATasLPFeasibility, method=method)
-    hyb_start = time()
-    hyb_witness = hyb_solver.solve()
-    hyb_stop = time()
+    hyb_solver_feas = HybridSolver(file, SATasLPFeasibility, method=method)
+    hyb_start_feas = time()
+    hyb_witness_feas = hyb_solver_feas.solve()
+    hyb_stop_feas = time()
+
+    hyb_solver_opt = HybridSolver(file, SATasLPOptimization, method=method)
+    hyb_start_opt = time()
+    hyb_witness_opt = hyb_solver_opt.solve()
+    hyb_stop_opt = time()
+
     sat_solver = BooleanSolver(file, verbose=0)
     bool_start = time()
     bool_witness = sat_solver.solve()
     bool_stop = time()
 
-    ok_hyb = hyb_solver.verify(hyb_witness)
+    ok_hyb_feas = hyb_solver_feas.verify(hyb_witness_feas)
+    ok_hyb_opt = hyb_solver_opt.verify(hyb_witness_opt)
     bool_witness = sat_solver.witness_to_linear(bool_witness)
-    ok_bool = sat_solver.verify(bool_witness)
+    ok_bool = hyb_solver_feas.verify(bool_witness)
 
-    hyb_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness)]
+    hyb_witness_feas = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_feas)]
+    hyb_witness_opt = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt)]
     bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)]
 
-    elapsed_hyb = hyb_stop - hyb_start
+    elapsed_hyb_feas = hyb_stop_feas - hyb_start_feas
+    elapsed_hyb_opt = hyb_stop_opt - hyb_start_opt
     elapsed_bool = bool_stop - bool_start
+
+    n_learned_hyb_feas = hyb_solver_feas.cnf_handler.learnt_clauses
+    n_learned_hyb_opt = hyb_solver_opt.cnf_handler.learnt_clauses
+    n_learned_bool = sat_solver.nb_learnt_clause
+
+    linear_it_feas = hyb_solver_feas.linear_it
+    linear_it_opt = hyb_solver_opt.linear_it
+    boolean_it_feas = hyb_solver_feas.boolean_it
+    boolean_it_opt = hyb_solver_opt.boolean_it
+
     name = file.split("/")[-1]
-    print(f"Elapsed time for our method: {elapsed_hyb}; elapsed time for CDCL: {elapsed_bool}")
-    print(f"Finished file {name}")
-    print("-------------------------------------------------------")
-    row = [name, elapsed_hyb, elapsed_bool, n_learned_hyb, n_learned_bool, hyb_witness, bool_witness]
-
-    return row
-
-
-def _worker_opt(args):
-
-    file, method = args
-
-    hyb_solver = HybridSolver(file, SATasLPOptimization, method=method)
-    hyb_start = time()
-    hyb_witness = hyb_solver.solve()[:hyb_solver.lp_solver.n_vars()]
-    hyb_stop = time()
-    sat_solver = BooleanSolver(file, verbose=0)
-    bool_start = time()
-    bool_witness = sat_solver.solve()
-    bool_stop = time()
-
-    ok_hyb = hyb_solver.verify(hyb_witness[:hyb_solver.lp_solver.n_vars()])
-    bool_witness = sat_solver.witness_to_linear(bool_witness)
-    ok_bool = hyb_solver.verify(bool_witness)
-
-    hyb_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness)]
-    bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)]
-
-    n_learned_bool = sat_solver.nb_learnt_clause 
-    n_learned_hyb = hyb_solver.cnf_handler.learnt_clauses
-    elapsed_hyb = hyb_stop - hyb_start
-    elapsed_bool = bool_stop - bool_start
-    name = file.split("/")[-1]
-
-    print(f"Elapsed time for our method: {elapsed_hyb}; elapsed time for CDCL: {elapsed_bool}")
+    print(f"Elapsed time for our method: {elapsed_hyb_feas} (FEAS), {elapsed_hyb_opt} (OPT); elapsed time for CDCL: {elapsed_bool}")
     print(f"Finished file {name}")
     print("-------------------------------------------------------")
 
-    row = [name, elapsed_hyb, elapsed_bool, n_learned_hyb, n_learned_bool, hyb_witness, bool_witness]
+
+    row = [
+        name, 
+        elapsed_hyb_feas, 
+        elapsed_hyb_opt, 
+        elapsed_bool,
+        n_learned_hyb_feas,
+        n_learned_hyb_opt,
+        n_learned_bool, 
+        hyb_witness_feas,
+        hyb_witness_opt,
+        bool_witness,
+        linear_it_feas,
+        linear_it_opt,
+        boolean_it_feas,
+        boolean_it_opt
+    ]
 
     return row
 
@@ -134,7 +126,6 @@ if __name__ == "__main__":
     if not n_processes:
         n_processes = os.cpu_count()
 
-    lp_type = args.type
     n_vars = args.n_vars
 
     files_dir = args.dir if args.dir[-1] != '/' else args.dir[:-1]
@@ -142,18 +133,28 @@ if __name__ == "__main__":
     
     files = [f"{files_dir}/{f}" for f in os.listdir(files_dir)]
 
-    if lp_type == "feasibility":
-        worker_fn = _worker_feas
-        experiments_file = f"experiments/data/time/uf{n_vars}-feasibility-{method}.csv"
-
-    elif lp_type == "optimization":
-        worker_fn = _worker_opt
-        experiments_file = f"experiments/data/time/uf{n_vars}-optimization-{method}.csv"
+    worker_fn = _worker
+    experiments_file = f"experiments/data/time/uf{n_vars}-{method}.csv"
 
     with open(experiments_file, "w") as f:
         writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_ALL)
 
-        columns = ['name', 'elapsed_hyb','elapsed_bool', 'n_learned_hyb', 'n_learned_bool', 'witness_hyb', 'witness_hyb']
+        columns = [
+            'name', 
+            'elapsed_hyb_feas', 
+            'elapsed_hyb_opt', 
+            'elapsed_bool',
+            'n_learned_hyb_feas',
+            'n_learned_hyb_opt',
+            'n_learned_bool', 
+            'hyb_witness_feas',
+            'hyb_witness_opt', 
+            'bool_witness',
+            'linear_it_feas',
+            'linear_it_opt',
+            'boolean_it_feas',
+            'boolean_it_opt'
+        ]
         writer.writerow(columns)
 
         with mp.Pool(n_processes) as p:
