@@ -150,9 +150,8 @@ class HybridSolver:
                     # pick a variable to satisfy the clause
                     # resolve conflict
                     # learn clauses
-                    formula = self.bool_solver.expand_and_learn(linear_sol, c)
+                    new_clauses = self.bool_solver.expand_and_learn(linear_sol, c)
                     # if no new clauses are generated, that means that the solution is still expansionable
-                    new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
                     for c in new_clauses:
                         self.cnf_handler.add_clause(c)
                         self.cnf_handler.learnt_clauses += 1
