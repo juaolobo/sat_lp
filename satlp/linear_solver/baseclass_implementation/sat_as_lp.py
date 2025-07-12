@@ -40,26 +40,3 @@ class SATasLP(SATasLPBaseclass):
             return witness
 
         print("INFEASIBLE")
-
-class SATasMILP(SATasLPBaseclass):
-
-    def __init__(self, filename=None):
-        super().__init__(filename)
-        self.solver = pywraplp.Solver.CreateSolver("SCIP")
-        if not self.solver:
-            raise Exception("Solver creation failed")
-
-    def solve(self):
-        s = self.solver.Solve()
-
-        if s == self.solver.INFEASIBLE:
-            print("INFEASIBLE")
-            self.solver.Clear()
-            return s, [], []
-
-        result = self.solver.Objective().Value()
-        witness = self.round([v.solution_value() if not isinstance(v, int) else v for v in self.vars])
-
-        return s, result, witness
-
-        

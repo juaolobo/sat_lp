@@ -1,3 +1,6 @@
+from numpy import array as np_array
+from numpy import append as np_append
+
 class CNFLoader():
 
     def __init__(self, filename=None):
@@ -23,7 +26,7 @@ class CNFLoader():
 
         self.n_vars = n_variables
         self.m_clauses = len(clauses)
-        self.clauses = clauses
+        self.clauses = np_array(clauses)
 
     def load(self, filename):
         if (self.clauses == None) or (filename != self.filename):
@@ -35,5 +38,5 @@ class CNFLoader():
         return inf_assignments        
 
     def add_clause(self, clause):
-        self.clauses.append(clause)
+        np_append(self.clauses, clause)
         self.m_clauses += 1

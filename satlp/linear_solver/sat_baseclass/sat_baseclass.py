@@ -58,20 +58,14 @@ class SATasLPBaseclass(ABC):
         solution = [i+1 if xi == 1 else -i-1 for i,xi in enumerate(witness)]
         return solution
 
-    def verify_partial(self, partial_witness):
+    def get_active_clauses(self, partial_witness):
 
-        satisfied_clauses = []
+
+        sat_clauses = []
+        unsat_clauses = []
         clauses = self.clauses()
 
-        witness = np.array(partial_witness)
-
-        for i in range(len(partial_witness)):
-
-            if not isinstance(partial_witness[i], int):
-                witness[i] = 0
-
-            elif partial_witness[i] == 0:
-                witness[i] = -1
+        witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in partial_witness])
 
         for i, c in enumerate(clauses):
 
@@ -81,9 +75,11 @@ class SATasLPBaseclass(ABC):
             res = np.max(witness[idx]*sgn)
 
             if res == 1:
-                satisfied_clauses.append(i)
+                sat_clauses.append(i)
+            else:
+                unsat_clauses.append(i)
 
-        return satisfied_clauses
+        return sat_clauses, unsat_clauses
 
     def load_cnf(self, filename):
         self.cnf_handler.load(filename)
