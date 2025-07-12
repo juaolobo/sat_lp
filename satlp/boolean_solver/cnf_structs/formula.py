@@ -146,4 +146,4 @@ class Formula:
         self.value = 0
 
     def add_clause(self, clause):
-        self.formula += [clause]
+        self.formula = np.append(self.formula, clause)

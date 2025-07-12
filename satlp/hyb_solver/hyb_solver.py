@@ -145,28 +145,30 @@ class HybridSolver:
                 conflict = self.check_linear_conflict(witness)
                 # track solution history
 
+                linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
                 for c in self.bool_solver.formula.formula[unsat_idx]:
                     # pick a variable to satisfy the clause
                     # resolve conflict
                     # learn clauses
-                    linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
-                    formula = self.bool_solver.expand_and_learn(linear_sol)
+                    formula = self.bool_solver.expand_and_learn(linear_sol, c)
+                    # if no new clauses are generated, that means that the solution is still expansionable
                     new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
-
                     for c in new_clauses:
                         self.cnf_handler.add_clause(c)
                         self.cnf_handler.learnt_clauses += 1
                     
                     self.bool_solver.restart()
 
-                resolved = self.solve_boolean()
+                breakpoint()
+                print(self.lp_solver.m_clauses())
+                # resolved = self.solve_boolean()
                 self.boolean_it += 1
-
                 # UNSAT
+                resolved = []
                 if resolved is None:
                     return None
-                                                           
-                self.fixing = {abs(xi): 1.0 if xi > 0 else 0.0 for xi in resolved}
+
+                self.fixing = {}
 
             # else continue to evolve the linear solution
             else:
