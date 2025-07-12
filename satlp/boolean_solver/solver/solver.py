@@ -274,11 +274,13 @@ class BooleanSolver:
         self.is_sat, self.conflict = self.formula.unit_propagate(1, self.graph)
         self.decision_level += 1
 
-        while self.is_sat == 0:    
-            decision = self.pick_sat_var(clause)
-            self.decision_level += 1
-            self.graph.add_node(decision, None, self.decision_level)
-            self.is_sat, self.conflict = self.formula.bcp(decision, self.decision_level, self.graph)
+        # should break produce a conflict
+        decision = self.pick_sat_var(clause)
+        self.decision_level += 1
+        self.graph.add_node(decision, None, self.decision_level)
+        self.is_sat, self.conflict = self.formula.bcp(decision, self.decision_level, self.graph)
+
+        assert self.is_sat == -1
 
         # solve all conflicts generated
         while self.is_sat == -1:

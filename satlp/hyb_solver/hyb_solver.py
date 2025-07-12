@@ -149,9 +149,6 @@ class HybridSolver:
                     # pick a variable to satisfy the clause
                     # resolve conflict
                     # learn clauses
-                    lit_pool = c.clause[:c.size]
-                    decision = np.random.choice(lit_pool, 1)
-                    
                     linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
                     formula = self.bool_solver.expand_and_learn(linear_sol)
                     new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
