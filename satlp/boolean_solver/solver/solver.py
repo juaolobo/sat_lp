@@ -268,11 +268,11 @@ class BooleanSolver:
         return self.graph.assigned_vars, self.formula
 
     def expand_and_learn(self, linear_sol, clause):
-        clause.print_info()
 
         # current bug: fixed variables are not remaining fixed in later iterations
         self.fix_variables(linear_sol)
-        self.is_sat, self.conflict = self.formula.unit_propagate(1, self.graph)
+        self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+        clause.print_info()
         print(self.graph.assigned_vars)
 
         # should break produce a conflict
@@ -293,19 +293,18 @@ class BooleanSolver:
         new_clauses = []
         while self.is_sat == -1:
             learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
-            if learnt_clause:
-                new_clauses.append(learnt_clause.clause)
             # detected unsolvable conflict => UNSAT
             if learnt_clause is None:
                 return None
+            else:
+                new_clauses.append(learnt_clause.clause)
 
+            print("BACKTRACK: ", learnt_clause, backtrack_level)
             self.formula.add_clause(learnt_clause)
             self.graph.backtrack(backtrack_level)
             self.formula.backtrack(backtrack_level, self.graph)
                 
             self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
-
-        clause.print_info()
 
         return new_clauses
 

@@ -151,12 +151,14 @@ class HybridSolver:
                     # resolve conflict
                     # learn clauses
                     new_clauses = self.bool_solver.expand_and_learn(linear_sol, c)
+                    print(new_clauses)
                     # if no new clauses are generated, that means that the solution is still expansionable
                     for c in new_clauses:
                         self.cnf_handler.add_clause(c)
                         self.cnf_handler.learnt_clauses += 1
                     
                     self.bool_solver.restart()
+                    print(len(self.bool_solver.formula.formula))
 
                 breakpoint()
                 print(self.lp_solver.m_clauses())
