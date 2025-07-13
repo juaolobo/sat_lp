@@ -57,14 +57,6 @@ class BooleanSolver:
 
         return w, w.get_backtrack_level()
     
-    def pick_sat_var(self, clause):
-        np.random.seed(456156)
-        lit_pool = clause.clause[:clause.size]
-        decision = np.random.choice(lit_pool, 1).item()
-
-        assert decision not in self.graph.assigned_vars
-        return decision
-
     def pick_branching_variable(self):
 
         ## Most frequent var first
@@ -181,16 +173,6 @@ class BooleanSolver:
                     witness.append(xi)
 
         return witness    
-            
-    def fix_variables(self, linear_sol):
-        for lit in linear_sol:
-            if lit not in self.graph.assigned_vars:
-                self.graph.add_node(lit, None, 0)
-                self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
-                if self.is_sat != 0:
-                    # leave this here if it ever happens
-                    print("SUPRISE MOTHERFUCKER")
-                    return
 
     def propagate_linear(self, linear_sol):
 
@@ -267,11 +249,30 @@ class BooleanSolver:
 
         return self.graph.assigned_vars, self.formula
 
-    def expand_and_learn(self, linear_sol, clause):
+    def pick_sat_var(self, clause):
+        np.random.seed(456156)
+        lit_pool = clause.clause[:clause.size]
+        decision = np.random.choice(lit_pool, 1).item()
 
+        assert decision not in self.graph.assigned_vars
+        return decision
+
+    def fix_variables(self, linear_sol):
+        for lit in linear_sol:
+            if lit not in self.graph.assigned_vars:
+                self.graph.add_node(lit, None, 0)
+                self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
+                if self.is_sat != 0:
+                    # leave this here if it ever happens
+                    print("SUPRISE MOTHERFUCKER")
+                    return
+
+    def expand_and_learn(self, linear_sol, idx):
+        
+        clause = self.formula.formula[idx]
         # current bug: fixed variables are not remaining fixed in later iterations
         self.fix_variables(linear_sol)
-        self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+        # self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
         clause.print_info()
         print(self.graph.assigned_vars)
 

@@ -146,12 +146,11 @@ class HybridSolver:
                 # track solution history
 
                 linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
-                for c in self.bool_solver.formula.formula[unsat_idx]:
+                for idx in unsat_idx:
                     # pick a variable to satisfy the clause
                     # resolve conflict
                     # learn clauses
-                    new_clauses = self.bool_solver.expand_and_learn(linear_sol, c)
-                    print(new_clauses)
+                    new_clauses = self.bool_solver.expand_and_learn(linear_sol, idx)
                     # if no new clauses are generated, that means that the solution is still expansionable
                     for c in new_clauses:
                         self.cnf_handler.add_clause(c)
