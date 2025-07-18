@@ -7,12 +7,11 @@ class BooleanSolver:
     def __init__(self, filename, verbose, cnf_handler=None):
         self.verbose = verbose
         self.cnf_handler = cnf_handler if cnf_handler is not None else CNFLoader(filename)
-        self.list_clause = self.cnf_handler.clauses
         self.nvars = self.cnf_handler.n_vars
-        self.formula = Formula(self.list_clause)
+        self.formula = Formula(self.cnf_handler.clauses)
         self.graph = ImplicationGraph()
         self.decision_level = 0
-        self.nb_clauses = len(self.list_clause)
+        self.nb_clauses = len(self.cnf_handler.clauses)
         self.nb_learnt_clause = 0
         self.nb_decisions = 0
         self.restart_count = 0
@@ -29,7 +28,7 @@ class BooleanSolver:
         return solution
 
     def restart(self):
-        self.formula = Formula(self.list_clause)
+        self.formula = Formula(self.cnf_handler.clauses)
         self.graph = ImplicationGraph()
         self.decision_level = 0
         self.restart_count += 1
@@ -273,34 +272,26 @@ class BooleanSolver:
         # current bug: fixed variables are not remaining fixed in later iterations
         self.fix_variables(linear_sol)
         # self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
-        clause.print_info()
-        print(self.graph.assigned_vars)
 
         # should break produce a conflict
         decision = self.pick_sat_var(clause)
         self.decision_level += 1
-        print(decision, self.graph.assigned_vars)
         self.graph.add_node(decision, None, self.decision_level)
         self.is_sat, self.conflict = self.formula.bcp(decision, self.decision_level, self.graph)
 
         if self.is_sat == 0:
             self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
 
-        # if self.is_sat != -1:
-        #     linear_sol.append(decision)
-        #     return linear_sol, self.formula
-
         # solve all conflicts generated
         new_clauses = []
         while self.is_sat == -1:
             learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
+            # learnt_clause.print_info()
             # detected unsolvable conflict => UNSAT
             if learnt_clause is None:
                 return None
-            else:
-                new_clauses.append(learnt_clause.clause)
 
-            print("BACKTRACK: ", learnt_clause, backtrack_level)
+            new_clauses.append(learnt_clause.clause)
             self.formula.add_clause(learnt_clause)
             self.graph.backtrack(backtrack_level)
             self.formula.backtrack(backtrack_level, self.graph)

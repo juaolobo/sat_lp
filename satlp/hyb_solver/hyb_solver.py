@@ -78,7 +78,10 @@ class HybridSolver:
                 witness = [0.5 for _ in range(lp.n_vars())]
                 return None
 
-            fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer()}
+            fixing = {
+                i+1: xi for i, xi in enumerate(witness) 
+                if xi.is_integer() and i <= self.lp_solver.n_vars()
+            }
 
             # if we hit a fixed point of the linear solver
             if fixing == self.fixing:
@@ -116,10 +119,9 @@ class HybridSolver:
 
                 self.fixing = {}
 
-            self.lp_solver.restart(fixing=self.fixing)                
+            self.lp_solver.restart(fixing=self.fixing)
             witness = self.solve_linear()
             self.linear_it += 1
-
 
             it += 1        
 
@@ -133,50 +135,51 @@ class HybridSolver:
         while not self.lp_solver.verify(witness):
             # i.e. INFEASIBLE
             if witness == None:
-                witness = [0.5 for _ in range(lp.n_vars())]
                 return None
 
-            fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer()}
+            fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer() and i < self.lp_solver.n_vars()}
 
             if fixing == self.fixing:
                 # satisfied clauses create a conflict with every single not satisfied on the boolean domain
                 sat_idx, unsat_idx = self.lp_solver.get_active_clauses(witness)
-                # function to check conflict/inexpansionability
-                conflict = self.check_linear_conflict(witness)
-                # track solution history
-
                 linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
+
+                new_clauses = []
                 for idx in unsat_idx:
                     # pick a variable to satisfy the clause
                     # resolve conflict
                     # learn clauses
-                    new_clauses = self.bool_solver.expand_and_learn(linear_sol, idx)
+                    new_clauses += self.bool_solver.expand_and_learn(linear_sol, idx)
                     # if no new clauses are generated, that means that the solution is still expansionable
-                    for c in new_clauses:
-                        self.cnf_handler.add_clause(c)
-                        self.cnf_handler.learnt_clauses += 1
-                    
                     self.bool_solver.restart()
-                    print(len(self.bool_solver.formula.formula))
 
-                breakpoint()
-                print(self.lp_solver.m_clauses())
+                new_clauses = set([tuple(c) for c in new_clauses])
+                for c in new_clauses:
+                    self.cnf_handler.add_clause(c)
+                    self.cnf_handler.learnt_clauses += 1
+
                 # resolved = self.solve_boolean()
                 self.boolean_it += 1
-                # UNSAT
+
+                # UNSAT fix later
                 resolved = []
                 if resolved is None:
                     return None
 
-                self.fixing = {}
+                self.fixing = dict()
 
             # else continue to evolve the linear solution
             else:
                 self.fixing = fixing
 
             self.lp_solver.restart(fixing=self.fixing)                
+
             witness = self.solve_linear()
             self.linear_it += 1
+            it += 1
+
+        print(f"Finished in {it} iterations")
+        return witness
 
 
     def verify(self, witness):
