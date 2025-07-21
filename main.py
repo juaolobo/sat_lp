@@ -51,6 +51,16 @@ if __name__ == "__main__":
     start = time.time()
     hyb_solver = HybridSolver(filename, lp_solver, method=method, track_history=True)
     witness = hyb_solver.new_solver()
+    sf = "formulas/solutions/uf20/uf20-09.cnf.out"
+    if witness is None:
+        print("------------------ SHIT BROKE ------------------")
+        print(hyb_solver.lp_solver.m_clauses())
+        with open(sf) as f:
+            sols = f.readlines()
+            for s in sols:
+                wit = [0 if int(xi) < 0 else 1 for xi in s.split()]
+                print(hyb_solver.lp_solver.verify(wit))
+
     # witness = hyb_solver.solve()
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")
