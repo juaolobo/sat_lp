@@ -213,6 +213,7 @@ class BooleanSolver:
             if self.is_sat == 0:
                 self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
 
+            new_clauses = []
             # solve conflict
             while self.is_sat == -1:
 
@@ -229,13 +230,15 @@ class BooleanSolver:
                     self.formula.repair(-xi, self.graph)
                     self.graph.remove_node(-xi)
 
+                new_clauses.append(learnt_clause.clause)
                 self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
 
         # return once there are no deductions to be made and all conflicts have been resolved
-        return self.graph.assigned_vars, self.formula
+        return self.graph.assigned_vars, new_clauses
 
     def extend_solution(self):
         
+        new_clauses = []
         # assign variables to advance further in the problem (and generate conflicts)
         while self.is_sat == 0:
             
@@ -255,10 +258,11 @@ class BooleanSolver:
             self.formula.add_clause(learnt_clause)
             self.graph.backtrack(backtrack_level)
             self.formula.backtrack(backtrack_level, self.graph)
+            new_clauses.append(learnt_clause.clause)
 
             self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
 
-        return self.graph.assigned_vars, self.formula
+        return self.graph.assigned_vars, new_clauses
 
 """
 -- outline of the algorithm

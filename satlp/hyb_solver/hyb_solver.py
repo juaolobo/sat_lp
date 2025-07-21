@@ -43,22 +43,18 @@ class HybridSolver:
         # assert fixing = self.fixing
         linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
 
-        resolved, formula = self.bool_solver.propagate_linear(linear_sol)
+        resolved, new_clauses = self.bool_solver.propagate_linear(linear_sol)
 
         # UNSAT
-        if formula is None:
+        if new_clauses is None:
             return None
 
-        new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
-
         if len(new_clauses) == 0:
-            resolved, formula = self.bool_solver.extend_solution()
+            resolved, new_clauses = self.bool_solver.extend_solution()
 
             # UNSAT
-            if formula is None:
+            if new_clauses is None:
                 return None
-
-            new_clauses = [f.clause for f in formula.formula[self.lp_solver.m_clauses():]]
 
         for c in new_clauses:
             self.cnf_handler.add_clause(c)
@@ -69,6 +65,7 @@ class HybridSolver:
         return resolved
 
     def solve(self):
+
         it = 0
         witness = self.solve_linear()
         self.linear_it += 1
@@ -78,7 +75,11 @@ class HybridSolver:
                 witness = [0.5 for _ in range(lp.n_vars())]
                 return None
 
-            fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer()}
+            fixing = {
+                        i+1: xi for i, xi in enumerate(witness) 
+                            if xi.is_integer() 
+                            if i < self.lp_solver.n_vars()
+                    }
 
             # if we hit a fixed point of the linear solver
             if fixing == self.fixing:
@@ -88,7 +89,7 @@ class HybridSolver:
                             xi if self.fixing[xi] 
                             else -xi 
                             for xi in list(self.fixing.keys()) 
-                            if abs(xi) <= self.lp_solver.n_vars()
+                            if xi <= self.lp_solver.n_vars()
                         ]
                     )
                     if len(sol) > 0:
@@ -99,6 +100,7 @@ class HybridSolver:
 
                 # UNSAT
                 if resolved is None:
+                    print("UNSATISFIABLE")
                     return None
                                                            
                 self.fixing = {abs(xi): 1.0 if xi > 0 else 0.0 for xi in resolved}
@@ -120,7 +122,6 @@ class HybridSolver:
             witness = self.solve_linear()
             self.linear_it += 1
 
-
             it += 1        
 
         print(f"Finished in {it} iterations")
@@ -131,12 +132,13 @@ class HybridSolver:
         sat = False
         if witness:
             sat = self.lp_solver.verify(witness)
-            if sat:
+            if sat is True:
                 print("SATISFIABLE")
                 witness = self.lp_solver.linear_to_witness(witness)
                 print(f"WITNESS: {witness[:self.lp_solver.n_vars()]}")
-                        
-            else: print("UNSATISFIABLE")
+
+            else:
+                print("UNSATISFIABLE")
 
         return sat
 
