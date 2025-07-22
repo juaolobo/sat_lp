@@ -72,7 +72,6 @@ class HybridSolver:
         while not self.lp_solver.verify(witness):
             # i.e. INFEASIBLE
             if witness == None:
-                witness = [0.5 for _ in range(lp.n_vars())]
                 return None
 
             fixing = {
