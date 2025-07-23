@@ -4,12 +4,7 @@ import numpy as np
 class Formula:
     
     def __init__(self, list_clause):
-        self.formula = []
-        for c in list_clause:
-            if len(c) > 0:
-                clause = Clause(c)
-                self.formula.append(clause)
-
+        self.formula = np.array([Clause(c) for c in list_clause if len(c) > 0])
         self.value = self.get_value()
 
     def print_info(self):
@@ -151,4 +146,4 @@ class Formula:
         self.value = 0
 
     def add_clause(self, clause):
-        self.formula += [clause]
+        self.formula = np.append(self.formula, clause)

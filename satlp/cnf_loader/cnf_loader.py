@@ -1,3 +1,6 @@
+from numpy import array as np_array
+from numpy import append as np_append
+
 class CNFLoader():
 
     def __init__(self, filename=None):

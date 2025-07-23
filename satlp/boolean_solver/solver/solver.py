@@ -7,12 +7,11 @@ class BooleanSolver:
     def __init__(self, filename, verbose, cnf_handler=None):
         self.verbose = verbose
         self.cnf_handler = cnf_handler if cnf_handler is not None else CNFLoader(filename)
-        self.list_clause = self.cnf_handler.clauses
         self.nvars = self.cnf_handler.n_vars
-        self.formula = Formula(self.list_clause)
+        self.formula = Formula(self.cnf_handler.clauses)
         self.graph = ImplicationGraph()
         self.decision_level = 0
-        self.nb_clauses = len(self.list_clause)
+        self.nb_clauses = len(self.cnf_handler.clauses)
         self.nb_learnt_clause = 0
         self.nb_decisions = 0
         self.restart_count = 0
@@ -29,9 +28,8 @@ class BooleanSolver:
         return solution
 
     def restart(self):
-        self.formula = Formula(self.list_clause)
+        self.formula = Formula(self.cnf_handler.clauses)
         self.graph = ImplicationGraph()
-        
         self.decision_level = 0
         self.restart_count += 1
         self.conflict_count = 0
@@ -57,7 +55,7 @@ class BooleanSolver:
                 i = 0
 
         return w, w.get_backtrack_level()
-
+    
     def pick_branching_variable(self):
 
         ## Most frequent var first
@@ -81,7 +79,7 @@ class BooleanSolver:
 
         assert decision not in self.graph.assigned_vars
         assert -decision not in self.graph.assigned_vars
-        decision = -decision if np.random.uniform(0, 1) >= 0.5 else decision
+        # decision = -decision if np.random.uniform(0, 1) >= 0.5 else decision
 
         return decision
 
@@ -174,21 +172,11 @@ class BooleanSolver:
                     witness.append(xi)
 
         return witness    
-            
 
     def propagate_linear(self, linear_sol):
 
         self.is_sat, self.conflict =  self.formula.unit_propagate(self.decision_level, self.graph)
-
-        for lit in linear_sol:
-            if lit not in self.graph.assigned_vars:
-                self.graph.add_node(lit, None, 0)
-                self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
-                if self.is_sat != 0:
-                    # leave this here if it ever happens
-                    print("SUPRISE MOTHERFUCKER")
-                    break
-
+        self.fix_variables(linear_sol)
         self.is_sat, self.conflict = self.formula.unit_propagate(1, self.graph)
         self.decision_level += 1
         conflict = None
@@ -263,6 +251,61 @@ class BooleanSolver:
             self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
 
         return self.graph.assigned_vars, new_clauses
+
+    def pick_sat_var(self, clause):
+        np.random.seed(456156)
+        lit_pool = clause.clause[:clause.size]
+        return lit_pool
+        decision = np.random.choice(lit_pool, 1).item()
+
+        assert decision not in self.graph.assigned_vars
+        return decision
+
+    def fix_variables(self, linear_sol):
+        for lit in linear_sol:
+            if lit not in self.graph.assigned_vars:
+                self.graph.add_node(lit, None, 0)
+                self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
+                if self.is_sat != 0:
+                    # leave this here if it ever happens
+                    print("SUPRISE MOTHERFUCKER")
+                    return
+
+    def expand_and_learn(self, linear_sol, idx):
+        
+        clause = self.formula.formula[idx]
+        # current bug: fixed variables are not remaining fixed in later iterations
+        self.fix_variables(linear_sol)
+        # self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+
+        # should break produce a conflict
+        decisions = self.pick_sat_var(clause)
+        for decision in decisions:
+            self.decision_level += 1
+            self.graph.add_node(decision, None, self.decision_level)
+            self.is_sat, self.conflict = self.formula.bcp(decision, self.decision_level, self.graph)
+
+            if self.is_sat == 0:
+                self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+
+            # solve all conflicts generated
+            new_clauses = []
+            while self.is_sat == -1:
+                learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
+                # detected unsolvable conflict => UNSAT
+                if learnt_clause is None:
+                    return None
+
+                new_clauses.append(learnt_clause.clause)
+                self.formula.add_clause(learnt_clause)
+                self.graph.backtrack(backtrack_level)
+                self.formula.backtrack(backtrack_level, self.graph)
+                    
+                self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+            self.restart()
+            self.fix_variables(linear_sol)
+
+        return new_clauses
 
 """
 -- outline of the algorithm

@@ -117,7 +117,7 @@ class HybridSolver:
 
                 self.fixing = {}
 
-            self.lp_solver.restart(fixing=self.fixing)                
+            self.lp_solver.restart(fixing=self.fixing)
             witness = self.solve_linear()
             self.linear_it += 1
 
@@ -195,6 +195,61 @@ class HybridSolver:
 
             # if stop:
             #     breakpoint()            
+    def new_solver(self):
+        it = 0
+        witness = self.solve_linear()
+        self.linear_it += 1
+        while not self.lp_solver.verify(witness):
+            # i.e. INFEASIBLE
+            if witness == None:
+                return None
+
+            fixing = {i+1: xi for i, xi in enumerate(witness) if xi.is_integer() and i < self.lp_solver.n_vars()}
+            if fixing == self.fixing:
+                # satisfied clauses create a conflict with every single not satisfied on the boolean domain
+                sat_idx, unsat_idx = self.lp_solver.get_active_clauses(witness)
+                linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
+                if linear_sol == []:
+                    return
+                    breakpoint()
+                print(linear_sol, witness[:self.lp_solver.n_vars()])
+                new_clauses = []
+                for idx in unsat_idx:
+                    # pick a variable to satisfy the clause
+                    # resolve conflict
+                    # learn clauses
+                    learned = self.bool_solver.expand_and_learn(linear_sol, idx)
+                    new_clauses += learned
+                    # if no new clauses are generated, that means that the solution is still expansionable
+                    self.bool_solver.restart()
+
+                new_clauses = set([tuple(c) for c in new_clauses])
+                for c in new_clauses:
+                    self.cnf_handler.add_clause(c)
+                    self.cnf_handler.learnt_clauses += 1
+
+                # resolved = self.solve_boolean()
+                self.boolean_it += 1
+
+                # UNSAT fix later
+                resolved = []
+                if resolved is None:
+                    return None
+
+                self.fixing = dict()
+
+            # else continue to evolve the linear solution
+            else:
+                self.fixing = fixing
+
+            self.lp_solver.restart(fixing=self.fixing)                
+
+            witness = self.solve_linear()
+            self.linear_it += 1
+            it += 1
+
+        print(f"Finished in {it} iterations")
+        return witness
 
 
     def verify(self, witness):
@@ -212,4 +267,17 @@ class HybridSolver:
 
         return sat
 
+    def check_linear_conflict(self, witness):
+        conflict = True
+        for i in range(self.lp_solver.n_vars()):
+            if not witness[i].is_integer():
+                aux = witness[i]
+                for w in [0,1]:
+                    witness[i] = w
+                    if (self.lp_solver.A_ub @ witness <= self.lp_solver.y_ub).all():
+                        conflict = False
+                        break
+                witness[i] = aux
+
+        return conflict
 

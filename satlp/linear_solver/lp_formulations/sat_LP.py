@@ -16,7 +16,7 @@ class SATasLPFeasibility(SATasLP):
         y_lb = np.zeros(shape=self.m_clauses())
         A_lb = np.zeros(shape=(self.m_clauses(), self.n_vars()))
         for i, c in enumerate(self.clauses()):
-
+            
             res_fixed = np.array([self.g(xi) for xi in c if abs(xi) in self.fixing.keys()])
             res = np.array([np.sign(xi) for xi in c if abs(xi) not in self.fixing.keys()])
 
