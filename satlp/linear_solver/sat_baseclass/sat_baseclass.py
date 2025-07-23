@@ -94,7 +94,8 @@ class SATasLPBaseclass(ABC):
         self._init_objects()
         self._create_optimization()
 
-    def restart(self, fixing={}):
+    def restart(self, fixing={}, witness=None):
         self.fixing = fixing
-        self._init_objects()
-        self._create_optimization()
+        self.witness = witness
+        # self._init_objects()
+        # self._create_optimization()

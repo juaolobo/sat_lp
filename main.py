@@ -50,15 +50,15 @@ if __name__ == "__main__":
     lp_solver =  SATasLPOptimization if args.type == "optimization" else SATasLPFeasibility
     start = time.time()
     hyb_solver = HybridSolver(filename, lp_solver, method=method, track_history=True)
-    witness = hyb_solver.solve()
+    witness = hyb_solver.optimize2()
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")
     hyb_solver.verify(witness)
 
-    sat_solver = BooleanSolver(filename, verbose=0)
-    sat_solver.solve()
+    # sat_solver = BooleanSolver(filename, verbose=0)
+    # sat_solver.solve()
 
-    print(witness[:hyb_solver.lp_solver.n_vars()])
-    print(witness[hyb_solver.lp_solver.n_vars():2*hyb_solver.lp_solver.n_vars()])
-    print(witness[2*hyb_solver.lp_solver.n_vars():])
+    # print(witness[:hyb_solver.lp_solver.n_vars()])
+    # print(witness[hyb_solver.lp_solver.n_vars():2*hyb_solver.lp_solver.n_vars()])
+    # print(witness[2*hyb_solver.lp_solver.n_vars():])
 

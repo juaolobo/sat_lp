@@ -40,18 +40,19 @@ class SATasLPFeasibility(SATasLP):
 
 class SATasLPOptimization(SATasLP):
 
-    def __init__(self, filename=None, cnf_handler=None, fixing={}, method='highs-ipm'):
+    def __init__(self, filename=None, cnf_handler=None, fixing={}, witness=None, method='highs-ipm'):
         self.fixing = fixing
+        self.witness = witness
         super().__init__(filename, cnf_handler, method)
 
     def _init_objects(self):
         
         # Ax <= y
-        y_lb = np.zeros(shape=self.m_clauses() + self.n_vars())
-        A_lb = np.zeros(shape=(self.m_clauses() + self.n_vars(), 3*self.n_vars()))
+        y_lb = np.zeros(shape=self.m_clauses())
+        A_lb = np.zeros(shape=(self.m_clauses(), 3*self.n_vars()))
 
-        y_eq = np.zeros(shape=self.n_vars())
-        A_eq = np.zeros(shape=(self.n_vars(), 3*self.n_vars()))
+        y_eq = np.zeros(shape=2*self.n_vars())
+        A_eq = np.zeros(shape=(2*self.n_vars(), 3*self.n_vars()))
 
         # construct matrices following Ax >= y
         for i, c in enumerate(self.clauses()):
@@ -81,18 +82,32 @@ class SATasLPOptimization(SATasLP):
                 A_eq[i][2*n+i] = -1
                 y_eq[i] = 1/2
 
-                # y_n+i + y_2n+i <= 1/2
-                A_ub[m+i][n+i] = 1
-                A_ub[m+i][2*n+i] = 1
-                y_ub[m+i] = 1/2
+            # y_n+i + y_2n+i = 1/2
+            A_eq[n+i][n+i] = 1
+            A_eq[n+i][2*n+i] = 1
+            y_eq[n+i] = 1/2
 
+        # min x+x- + ...
+        c = np.zeros(3*self.n_vars())
+        if self.witness is not None:
 
-        c = -np.ones(3*self.n_vars())
-        c[:n] = 0
-        for i in range(n):
-            if i+1 in self.fixing.keys():
-                c[i+n] = 0
-                c[i+2*n] = 0
+            for i in range(n):
+                if not self.witness[i].is_integer():
+
+                    if self.witness[n+i] < self.witness[2*n+i]:
+                        c[2*n+i] = self.witness[n+i]
+                        c[n+i] = 0
+
+                    else:
+                        c[n+i] = self.witness[2*n+i]
+                        c[2*n+i] = 0
+
+        else:
+            c[2*n:] = 1/2
+
+        print(f"C: {c[:self.n_vars()]}")
+        print(f"C_+: {c[self.n_vars():2*self.n_vars()]}")
+        print(f"C_-: {c[2*self.n_vars():]}")
 
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub

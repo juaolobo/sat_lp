@@ -126,6 +126,77 @@ class HybridSolver:
         print(f"Finished in {it} iterations")
         return witness
 
+    def optimize1(self):
+        import numpy as np
+        it = 0
+        witness = np.array(self.solve_linear())
+        print(f"X: {witness[:self.lp_solver.n_vars()]}")
+        print(f"X_+: {witness[self.lp_solver.n_vars():2*self.lp_solver.n_vars()]}")
+        print(f"X_-: {witness[2*self.lp_solver.n_vars():]}")
+
+        while not self.lp_solver.verify(witness):
+
+            fixing = {
+                i+1: xi for i, xi in enumerate(witness) 
+                    if xi.is_integer() 
+                    if i < self.lp_solver.n_vars()
+            }
+            # fixing = {}
+            # if fixing == self.lp_solver.fixing:
+            #     breakpoint()
+            self.lp_solver.restart(fixing=fixing, witness=witness)
+            witness = np.array(self.solve_linear())
+            self.linear_it += 1
+            print(f"X: {witness[:self.lp_solver.n_vars()]}")
+            print(f"X_+: {witness[self.lp_solver.n_vars():2*self.lp_solver.n_vars()]}")
+            print(f"X_-: {witness[2*self.lp_solver.n_vars():]}")
+
+            stop = True
+            for xi in witness[:self.lp_solver.n_vars()]:
+                if not xi.is_integer() and xi != 0.5:
+                    stop = False
+                    break
+
+            # if stop:
+            #     breakpoint()            
+
+    def optimize2(self):
+        import numpy as np
+        it = 0
+        witness = np.array(self.solve_linear())
+        print(f"X: {witness[:self.lp_solver.n_vars()]}")
+        print(f"X_+: {witness[self.lp_solver.n_vars():2*self.lp_solver.n_vars()]}")
+        print(f"X_-: {witness[2*self.lp_solver.n_vars():]}")
+
+        while not self.lp_solver.verify(witness):
+
+            fixing = {
+                i+1: xi for i, xi in enumerate(witness) 
+                    if xi.is_integer() 
+                    if i < self.lp_solver.n_vars()
+            }
+            if fixing == self.lp_solver.fixing:
+                breakpoint()
+            # fixing = {}
+            # if fixing == self.lp_solver.fixing:
+            #     breakpoint()
+            self.lp_solver.restart(fixing=fixing, witness=witness)
+            witness = np.array(self.solve_linear())
+            self.linear_it += 1
+            print(f"X: {witness[:self.lp_solver.n_vars()]}")
+            print(f"X_+: {witness[self.lp_solver.n_vars():2*self.lp_solver.n_vars()]}")
+            print(f"X_-: {witness[2*self.lp_solver.n_vars():]}")
+
+            stop = True
+            for xi in witness[:self.lp_solver.n_vars()]:
+                if not xi.is_integer() and xi != 0.5:
+                    stop = False
+                    break
+
+            # if stop:
+            #     breakpoint()            
+
+
     def verify(self, witness):
         
         sat = False
