@@ -175,23 +175,47 @@ class HybridSolver:
                     if xi.is_integer() 
                     if i < self.lp_solver.n_vars()
             }
-            if fixing == self.lp_solver.fixing:
-                breakpoint()
-            # fixing = {}
-            # if fixing == self.lp_solver.fixing:
-            #     breakpoint()
+            if fixing == self.fixing:
+                # satisfied clauses create a conflict with every single not satisfied on the boolean domain
+                sat_idx, unsat_idx = self.lp_solver.get_active_clauses(witness)
+                linear_sol = [xi if self.fixing[xi] else -xi for xi in self.fixing.keys()]
+                if linear_sol == []:
+                    return
+                    breakpoint()
+                print(linear_sol, witness[:self.lp_solver.n_vars()])
+                
+                new_clauses = []
+                for idx in unsat_idx:
+                    # pick a variable to satisfy the clause
+                    # resolve conflict
+                    # learn clauses
+                    learned = self.bool_solver.expand_and_learn(linear_sol, idx)
+                    new_clauses += learned
+                    # if no new clauses are generated, that means that the solution is still expansionable
+                    self.bool_solver.restart()
+
+                new_clauses = set([tuple(c) for c in new_clauses])
+                for c in new_clauses:
+                    self.cnf_handler.add_clause(c)
+                    self.cnf_handler.learnt_clauses += 1
+
+                # resolved = self.solve_boolean()
+                self.boolean_it += 1
+
+                # UNSAT fix later
+                resolved = []
+                if resolved is None:
+                    return None
+
+                self.fixing = dict()
+
+            # else continue to evolve the linear solution
+            else:
+                self.fixing = fixing
+
             self.lp_solver.restart(fixing=fixing, witness=witness)
             witness = np.array(self.solve_linear())
             self.linear_it += 1
-            print(f"X: {witness[:self.lp_solver.n_vars()]}")
-            print(f"X_+: {witness[self.lp_solver.n_vars():2*self.lp_solver.n_vars()]}")
-            print(f"X_-: {witness[2*self.lp_solver.n_vars():]}")
-
-            stop = True
-            for xi in witness[:self.lp_solver.n_vars()]:
-                if not xi.is_integer() and xi != 0.5:
-                    stop = False
-                    break
 
             # if stop:
             #     breakpoint()            
