@@ -105,10 +105,6 @@ class SATasLPOptimization(SATasLP):
         else:
             c[2*n:] = 1/2
 
-        print(f"C: {c[:self.n_vars()]}")
-        print(f"C_+: {c[self.n_vars():2*self.n_vars()]}")
-        print(f"C_-: {c[2*self.n_vars():]}")
-
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub
         self.A_ub = A_ub
