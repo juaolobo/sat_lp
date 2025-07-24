@@ -54,10 +54,16 @@ def _worker(args):
     hyb_witness_feas = hyb_solver_feas.solve()
     hyb_stop_feas = time()
 
-    hyb_solver_opt = HybridSolver(file, SATasLPOptimization, method=method)
-    hyb_start_opt = time()
-    hyb_witness_opt = hyb_solver_opt.solve()
-    hyb_stop_opt = time()
+    hyb_solver_opt1 = HybridSolver(file, SATasLPOptimization, method=method)
+    hyb_start_opt1 = time()
+    hyb_witness_opt1 = hyb_solver_opt1.optimize1()
+    hyb_stop_opt1 = time()
+
+    hyb_solver_opt2 = HybridSolver(file, SATasLPOptimization, method=method)
+    hyb_start_opt2 = time()
+    hyb_witness_opt2 = hyb_solver_opt2.optimize2()
+    hyb_stop_opt2 = time()
+
 
     sat_solver = BooleanSolver(file, verbose=0)
     bool_start = time()
@@ -65,29 +71,35 @@ def _worker(args):
     bool_stop = time()
 
     ok_hyb_feas = hyb_solver_feas.verify(hyb_witness_feas)
-    ok_hyb_opt = hyb_solver_opt.verify(hyb_witness_opt)
+    ok_hyb_opt1 = hyb_solver_opt1.verify(hyb_witness_opt1)
+    ok_hyb_opt2 = hyb_solver_opt2.verify(hyb_witness_opt2)
     bool_witness = sat_solver.witness_to_linear(bool_witness)
     ok_bool = hyb_solver_feas.verify(bool_witness)
 
     hyb_witness_feas = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_feas)]
-    hyb_witness_opt = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt)]
+    hyb_witness_opt1 = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt1)]
+    hyb_witness_opt2 = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt2)]
     bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)]
 
     elapsed_hyb_feas = hyb_stop_feas - hyb_start_feas
-    elapsed_hyb_opt = hyb_stop_opt - hyb_start_opt
+    elapsed_hyb_opt1 = hyb_stop_opt1 - hyb_start_opt1
+    elapsed_hyb_opt2 = hyb_stop_opt2 - hyb_start_opt2
     elapsed_bool = bool_stop - bool_start
 
     n_learned_hyb_feas = hyb_solver_feas.cnf_handler.learnt_clauses
-    n_learned_hyb_opt = hyb_solver_opt.cnf_handler.learnt_clauses
+    n_learned_hyb_opt1 = hyb_solver_opt1.cnf_handler.learnt_clauses
+    n_learned_hyb_opt2 = hyb_solver_opt2.cnf_handler.learnt_clauses
     n_learned_bool = sat_solver.nb_learnt_clause
 
     linear_it_feas = hyb_solver_feas.linear_it
-    linear_it_opt = hyb_solver_opt.linear_it
+    linear_it_opt1 = hyb_solver_opt1.linear_it
+    linear_it_opt2 = hyb_solver_opt2.linear_it
     boolean_it_feas = hyb_solver_feas.boolean_it
-    boolean_it_opt = hyb_solver_opt.boolean_it
+    boolean_it_opt1 = hyb_solver_opt2.boolean_it
+    boolean_it_opt1 = hyb_solver_opt2.boolean_it
 
     name = file.split("/")[-1]
-    print(f"Elapsed time for our method: {elapsed_hyb_feas} (FEAS), {elapsed_hyb_opt} (OPT); elapsed time for CDCL: {elapsed_bool}")
+    print(f"Elapsed time for our method: {elapsed_hyb_feas} (FEAS), {elapsed_hyb_opt1} (OPT), {elapsed_hyb_opt2} (OPT WITH FIXING); elapsed time for CDCL: {elapsed_bool}")
     print(f"Finished file {name}")
     print("-------------------------------------------------------")
 
@@ -95,18 +107,23 @@ def _worker(args):
     row = [
         name, 
         elapsed_hyb_feas, 
-        elapsed_hyb_opt, 
+        elapsed_hyb_opt1, 
+        elapsed_hyb_opt2, 
         elapsed_bool,
         n_learned_hyb_feas,
-        n_learned_hyb_opt,
+        n_learned_hyb_opt1,
+        n_learned_hyb_opt2,
         n_learned_bool, 
         hyb_witness_feas,
-        hyb_witness_opt,
+        hyb_witness_opt1,
+        hyb_witness_opt2,
         bool_witness,
         linear_it_feas,
-        linear_it_opt,
+        linear_it_opt1,
+        linear_it_opt2,
         boolean_it_feas,
-        boolean_it_opt
+        boolean_it_opt1,
+        boolean_it_opt2
     ]
 
     return row
@@ -142,18 +159,23 @@ if __name__ == "__main__":
         columns = [
             'name', 
             'elapsed_hyb_feas', 
-            'elapsed_hyb_opt', 
+            'elapsed_hyb_opt1', 
+            'elapsed_hyb_opt2', 
             'elapsed_bool',
             'n_learned_hyb_feas',
-            'n_learned_hyb_opt',
+            'n_learned_hyb_opt1',
+            'n_learned_hyb_opt2',
             'n_learned_bool', 
             'hyb_witness_feas',
-            'hyb_witness_opt', 
+            'hyb_witness_opt1',
+            'hyb_witness_opt2',
             'bool_witness',
             'linear_it_feas',
-            'linear_it_opt',
+            'linear_it_opt1',
+            'linear_it_opt2',
             'boolean_it_feas',
-            'boolean_it_opt'
+            'boolean_it_opt1',
+            'boolean_it_opt2'
         ]
         writer.writerow(columns)
 

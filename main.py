@@ -3,7 +3,7 @@ import random
 import time
 import argparse, sys
 
-from satlp import HybridSolver, BooleanSolver, SATasLPFeasibility, SATasLPOptimization
+from satlp import HybridSolver, BooleanSolver, SATasLPFeasibility, SATasLPOptimization, SATasLPOptimization2
 
 def create_parser():
     parser = argparse.ArgumentParser()
@@ -42,21 +42,23 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         cmd_parser.print_help()
         exit(0)
-
+        
     args = cmd_parser.parse_args()
 
     filename = args.input_file
     method = args.method
     lp_solver =  SATasLPOptimization if args.type == "optimization" else SATasLPFeasibility
+    # lp_solver =  SATasLPOptimization2
+    sat_solver = BooleanSolver(filename, verbose=0)
+    sat_solver.solve()
+
     start = time.time()
     hyb_solver = HybridSolver(filename, lp_solver, method=method, track_history=True)
-    witness = hyb_solver.optimize2()
+    witness = hyb_solver.optimize1(verbose=True)
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")
     hyb_solver.verify(witness)
 
-    # sat_solver = BooleanSolver(filename, verbose=0)
-    # sat_solver.solve()
 
     # print(witness[:hyb_solver.lp_solver.n_vars()])
     # print(witness[hyb_solver.lp_solver.n_vars():2*hyb_solver.lp_solver.n_vars()])

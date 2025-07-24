@@ -6,8 +6,9 @@ from abc import ABC, abstractmethod
 
 class SATasLP(SATasLPBaseclass):
 
-    def __init__(self, filename=None, cnf_handler=None, method=None):
+    def __init__(self, filename=None, cnf_handler=None, method=None, eps=10e-6):
         super().__init__(filename, cnf_handler)
+        self.eps = eps
         self.solver = linprog
         self.g = lambda x: 1 - self.fixing[abs(x)] if x < 0 else self.fixing[abs(x)]
         self.A_ub = None
@@ -33,10 +34,123 @@ class SATasLP(SATasLPBaseclass):
             bounds=self.bounds, 
             method=self.method
         )
+        res = result.fun
+        print(f"LAST OPTIMIZATION RESULT: {res}")
         x = result.x
 
         if result.success:
-            witness = [x[i-1].item() if i not in self.fixing.keys() else self.fixing[i] for i in range(1,len(x)+1)]
+            witness = np.array(
+                [
+                    x[i-1].item() 
+                    if i not in self.fixing.keys() 
+                    else self.fixing[i] 
+                    for i in range(1,len(x)+1)
+                ]
+            )
+
             return witness
 
         print("INFEASIBLE")
+
+
+    def verify(self, witness):
+
+        clauses = self.cnf_handler.clauses
+        ver_witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in witness])
+        for c in clauses:
+            abs_c = np.abs(c) 
+            idx = abs_c - 1
+            sgn = c/abs_c
+            res = np.max(ver_witness[idx]*sgn)
+            if res != 1:
+                return False
+
+        return True
+
+    def check_conflict(self, witness):
+
+        clauses = self.cnf_handler.clauses
+        n_vars = self.cnf_handler.n_vars
+        ver_witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in witness[:n_vars]])
+
+        for c in clauses:
+            abs_c = np.abs(c) 
+            idx = abs_c - 1
+            sgn = c/abs_c
+            res = np.max(ver_witness[idx]*sgn)
+
+            if res == -1:
+                return True
+
+        return False
+
+    def check_blocked(self, witness):
+
+        clauses = self.cnf_handler.clauses
+        n_vars = self.cnf_handler.n_vars
+        ver_witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in witness[:n_vars]])
+
+        if self.verify(witness):
+            return False
+
+        for i, xi in enumerate(ver_witness):
+            if xi == 0:
+                # pick xi = [-1, 1] and check for conflicts
+                aux = ver_witness[i]
+                for v in [-1, 1]:
+                    ver_witness[i] = v
+                    if not self.check_conflict(ver_witness):
+                        return False
+
+                ver_witness[i] = aux
+
+        return True
+
+    def linear_to_witness(self, witness):
+        solution = [i+1 if xi == 1 else -i-1 for i,xi in enumerate(witness)]
+        return solution
+
+    def get_active_clauses(self, partial_witness):
+
+        sat_clauses = []
+        unsat_clauses = []
+        clauses = self.cnf_handler.clauses
+
+        witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in partial_witness])
+
+        for i, c in enumerate(clauses):
+
+            abs_c = np.abs(c) 
+            idx = abs_c - 1
+            sgn = c/abs_c
+            res = np.max(witness[idx]*sgn)
+
+            if res == 1:
+                sat_clauses.append(i)
+            else:
+                unsat_clauses.append(i)
+
+        return sat_clauses, unsat_clauses
+
+    def load_cnf(self, filename):
+        self.cnf_handler.load(filename)
+
+    def create_lp(self, filename=None):
+        if filename:
+            self.load_cnf(filename)
+        self._init_objects()
+        self._create_optimization()
+
+    def restart(self, fixing={}, potential_coefs=None, last_witness=None):
+        self.fixing = fixing
+        self.potential_coefs = potential_coefs
+        self.last_witness = last_witness
+
+    def is_one(self, x):
+        return np.abs(1-x) < self.eps
+
+    def is_zero(self, x):
+        return np.abs(x) < self.eps
+
+    def is_boolean(self, x):
+        return self.is_one(x) | self.is_zero(x)
