@@ -161,8 +161,7 @@ class HybridSolver:
             elif xi == 0:
                 dmacs = dmacs | {-i-1}
 
-        c = self.lp_solver.c.copy()
-        self.lp_solver.restart(potential_coefs=c, last_witness=witness)
+        self.lp_solver.restart(potential_coefs=witness)
         while not self.lp_solver.verify(witness):
             
             last = dmacs

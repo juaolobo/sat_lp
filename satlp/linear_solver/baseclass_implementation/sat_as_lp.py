@@ -141,10 +141,9 @@ class SATasLP(SATasLPBaseclass):
         self._init_objects()
         self._create_optimization()
 
-    def restart(self, fixing={}, potential_coefs=None, last_witness=None):
+    def restart(self, fixing={}, potential_coefs=None):
         self.fixing = fixing
         self.potential_coefs = potential_coefs
-        self.last_witness = last_witness
 
     def is_one(self, x):
         return np.abs(1-x) < self.eps

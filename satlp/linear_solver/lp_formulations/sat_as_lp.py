@@ -50,14 +50,12 @@ class SATasLPOptimization(SATasLP):
         fixing={}, 
         potential_coefs=None, 
         method='highs-ipm',
-        last_witness = None
     ):
         super().__init__(filename, cnf_handler, method)
         self.fixing = fixing
         self.potential_coefs = potential_coefs
         self.n_vars = cnf_handler.n_vars
         self.m_clauses = cnf_handler.m_clauses
-        self.last_witness = last_witness
 
     def _init_objects(self):
         
@@ -127,6 +125,7 @@ class SATasLPOptimization(SATasLP):
         else:
             c[2*n_vars:] = 1/2
 
+    
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub
         self.A_ub = A_ub
