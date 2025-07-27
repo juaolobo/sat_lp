@@ -48,14 +48,16 @@ class SATasLPOptimization(SATasLP):
         filename=None, 
         cnf_handler=None, 
         fixing={}, 
-        potential_coefs=None, 
+        last_coefs=None, 
+        last_witness=None,
         method='highs-ipm',
     ):
         super().__init__(filename, cnf_handler, method)
         self.fixing = fixing
-        self.potential_coefs = potential_coefs
+        self.last_coefs = last_coefs
         self.n_vars = cnf_handler.n_vars
         self.m_clauses = cnf_handler.m_clauses
+        self.last_witness = last_witness
 
     def _init_objects(self):
         
@@ -102,26 +104,31 @@ class SATasLPOptimization(SATasLP):
 
         # min x+x- + ...
         c = np.zeros(3*n_vars)
-        if self.potential_coefs is not None:
+        if self.last_witness is not None:
 
             # get boolean array of which variable is boolean
-            is_boolean = self.is_boolean(self.potential_coefs)
+            is_boolean = self.is_boolean(self.last_witness)
             for i in range(n_vars):
 
                 if not is_boolean[i] and i+1 not in self.fixing.keys():
-                    if self.potential_coefs[n_vars+i] < self.potential_coefs[2*n_vars+i]:
-                        # c[2*n_vars+i] = self.potential_coefs[n_vars+i]
+                    if self.last_witness[n_vars+i] < self.last_witness[2*n_vars+i]:
+                        # c[2*n_vars+i] = self.last_witness[n_vars+i]
                         c[2*n_vars+i] = 1/2
-                    else:
-                        # c[n_vars+i] = self.potential_coefs[2*n_vars+i]
+                    elif self.last_witness[n_vars+i] > self.last_witness[2*n_vars+i]:
+                        # c[n_vars+i] = self.last_witness[2*n_vars+i]
                         c[n_vars+i] = 1/2
+                    else:
+                        c[n_vars+i] = self.last_coefs[2*n_vars+i]
+                        c[2*n_vars+i] = self.last_coefs[n_vars+i]
+                    # need to flip the coef if they are equal, but need last coef for this
                         
                 elif is_boolean[i] and i+1 not in self.fixing.keys():
-                    if self.is_one(self.potential_coefs[i]):
+                    if self.is_one(self.last_witness[i]):
                         c[2*n_vars+i] = 1/2
 
-                    elif self.is_zero(self.potential_coefs[i]):
+                    elif self.is_zero(self.last_witness[i]):
                         c[n_vars+i] = 1/2
+                    
         else:
             c[2*n_vars:] = 1/2
 
@@ -145,10 +152,10 @@ class SATasLPOptimization(SATasLP):
 
 class SATasLPOptimization2(SATasLP):
 
-    def __init__(self, filename=None, cnf_handler=None, fixing={}, potential_coefs=None, method='highs-ipm'):
+    def __init__(self, filename=None, cnf_handler=None, fixing={}, last_coefs=None, method='highs-ipm'):
         super().__init__(filename, cnf_handler, method)
         self.fixing = fixing
-        self.potential_coefs = potential_coefs
+        self.last_coefs = last_coefs
         self.n_vars = cnf_handler.n_vars
         self.m_clauses = cnf_handler.m_clauses
 
@@ -184,14 +191,14 @@ class SATasLPOptimization2(SATasLP):
 
         # optimization
         # min x.x + ...
-        if self.potential_coefs is not None:
-            c = 1-2*self.potential_coefs
+        if self.last_coefs is not None:
+            c = 1-2*self.last_coefs
 
         else:
             c = np.zeros(n_vars)
 
         print(f"C: {c}")
-        print(f"POT: {self.potential_coefs}")
+        print(f"POT: {self.last_coefs}")
 
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub

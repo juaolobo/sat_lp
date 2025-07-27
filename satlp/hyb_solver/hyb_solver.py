@@ -161,7 +161,8 @@ class HybridSolver:
             elif xi == 0:
                 dmacs = dmacs | {-i-1}
 
-        self.lp_solver.restart(potential_coefs=witness)
+        c = self.lp_solver.c.copy()
+        self.lp_solver.restart(last_coefs=c, last_witness=witness)
         while not self.lp_solver.verify(witness):
             
             last = dmacs
@@ -178,7 +179,7 @@ class HybridSolver:
                 elif xi == 0:
                     dmacs.add(-i-1)
 
-            solution_history.add(tuple(self.lp_solver.c))
+            solution_history.add(tuple(witness))
             tracking += 1
             self.linear_it += 1
 
@@ -197,7 +198,8 @@ class HybridSolver:
 
             if len(solution_history) < tracking:
                 sat_idx, unsat_idx = self.lp_solver.get_active_clauses(witness)
-                # unsat_idx = np.random.choice(unsat_idx, 1)
+                # solve issue in formula uf20-017 where these clauses dont generate conflict
+                # whenever last two terms are equal, that may create a loop
                 linear_sol = dmacs
 
                 new_clauses = []
@@ -227,7 +229,8 @@ class HybridSolver:
                 self.lp_solver.restart()
 
             else:
-                self.lp_solver.restart(potential_coefs=witness)
+                c = self.lp_solver.c.copy()
+                self.lp_solver.restart(last_coefs=c, last_witness=witness)
 
             self.lp_solver.create_lp()
 
@@ -310,12 +313,12 @@ class HybridSolver:
                 tracking = 0
                 self.boolean_it += 1
                 self.fixing = dict()
-                self.lp_solver.restart(fixing=self.fixing, potential_coefs=None)
+                self.lp_solver.restart(fixing=self.fixing, last_coefs=None)
 
             # else continue to evolve the linear solution
             else:
                 self.fixing = fixing
-                self.lp_solver.restart(fixing=self.fixing, potential_coefs=witness)
+                self.lp_solver.restart(fixing=self.fixing, last_coefs=witness)
 
             witness = self.solve_linear()
 
