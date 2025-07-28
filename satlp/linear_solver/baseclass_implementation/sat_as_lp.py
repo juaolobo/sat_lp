@@ -108,7 +108,15 @@ class SATasLP(SATasLPBaseclass):
         return True
 
     def linear_to_witness(self, witness):
-        solution = [i+1 if xi == 1 else -i-1 for i,xi in enumerate(witness)]
+        n_vars = self.cnf_handler.n_vars
+        solution = []
+
+        for i in range(n_vars):
+            if self.is_one(witness[i]):
+                solution.append(i+1)
+            elif self.is_zero(witness[i]):
+                solution.append(-i-1)
+
         return solution
 
     def get_active_clauses(self, partial_witness):

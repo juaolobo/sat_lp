@@ -25,6 +25,18 @@ class HybridSolver:
         self.solution_history = []
         self.linear_it = 0
         self.boolean_it = 0
+        
+
+    def print_verbose(self, witness):
+        n_vars = self.cnf_handler.n_vars
+        dmacs = self.lp_solver.linear_to_witness(witness)
+        print(f"X: {witness[:n_vars]}")
+        print(f"X_+: {witness[n_vars:2*n_vars]}")
+        print(f"C_+: {self.lp_solver.c[n_vars:2*n_vars]}")
+        print(f"X_-: {witness[2*n_vars:]}")
+        print(f"C_-: {self.lp_solver.c[2*n_vars:]}")
+
+        print(f"WITNESS: {sorted(list(dmacs), key=abs)}")
 
     def check_solutions(self, solutions, solution):
         errors = []
@@ -148,38 +160,21 @@ class HybridSolver:
         tracking = 0
 
         if verbose:
-            print(f"X: {witness[:n_vars]}")
-            print(f"X_+: {witness[n_vars:2*n_vars]}")
-            print(f"C_+: {self.lp_solver.c[n_vars:2*n_vars]}")
-            print(f"X_-: {witness[2*n_vars:]}")
-            print(f"C_-: {self.lp_solver.c[2*n_vars:]}")
-
-        dmacs = set()
-        for i, xi in enumerate(witness[:n_vars]):
-            if xi == 1:
-                dmacs = dmacs | {i+1}
-            elif xi == 0:
-                dmacs = dmacs | {-i-1}
+            self.print_verbose(witness)
 
         c = self.lp_solver.c.copy()
         self.lp_solver.restart(last_coefs=c, last_witness=witness)
         while not self.lp_solver.verify(witness):
             
-            last = dmacs
+            last_witness = witness
             witness = self.solve_linear()
 
-            # INFEASBIEL
+            # INFEASBLE
             if witness is None:
                 return None
 
-            dmacs = set()
-            for i, xi in enumerate(witness[:n_vars]):
-                if xi == 1:
-                    dmacs.add(i+1)
-                elif xi == 0:
-                    dmacs.add(-i-1)
 
-            solution_history.add(tuple(witness))
+            solution_history.add(tuple(self.lp_solver.c))
             tracking += 1
             self.linear_it += 1
 
@@ -187,20 +182,13 @@ class HybridSolver:
                 print("------------------------------------------------------------")
                 print(f"NUMBER OF DIFFERENT SOLUTIONS: {len(solution_history)}, NUMBER OF CURRENT CYCLE ITERATIONS: {tracking}")
 
-                print(f"X: {witness[:n_vars]}")
-                print(f"X_+: {witness[n_vars:2*n_vars]}")
-                print(f"C_+: {self.lp_solver.c[n_vars:2*n_vars]}")
-                print(f"X_-: {witness[2*n_vars:]}")
-                print(f"C_-: {self.lp_solver.c[2*n_vars:]}")
-
-                print(f"WITNESS: {sorted(list(dmacs), key=abs)}")
-
+                self.print_verbose(witness)
 
             if len(solution_history) < tracking:
-                sat_idx, unsat_idx = self.lp_solver.get_active_clauses(witness)
+                sat_idx, unsat_idx = self.lp_solver.get_active_clauses(last_witness)
                 # solve issue in formula uf20-017 where these clauses dont generate conflict
                 # whenever last two terms are equal, that may create a loop
-                linear_sol = dmacs
+                dmacs_witness = self.lp_solver.linear_to_witness(witness)
 
                 new_clauses = []
                 self.bool_solver.restart()
@@ -208,8 +196,7 @@ class HybridSolver:
                     # pick a variable to satisfy the clause
                     # resolve conflict
                     # learn clauses
-                    learned = self.bool_solver.expand_and_learn(linear_sol, idx)
-
+                    learned = self.bool_solver.expand_and_learn(dmacs_witness, idx)
                     # UNSAT
                     if learned is None:
                         return None

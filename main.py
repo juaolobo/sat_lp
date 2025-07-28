@@ -49,8 +49,6 @@ if __name__ == "__main__":
     method = args.method
     lp_solver =  SATasLPOptimization if args.type == "optimization" else SATasLPFeasibility
     # lp_solver =  SATasLPOptimization2
-    sat_solver = BooleanSolver(filename, verbose=0)
-    sat_solver.solve()
 
     start = time.time()
     hyb_solver = HybridSolver(filename, lp_solver, method=method, track_history=True)
@@ -58,6 +56,9 @@ if __name__ == "__main__":
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")
     hyb_solver.verify(witness)
+
+    sat_solver = BooleanSolver(filename, verbose=0)
+    sat_solver.solve()
 
 
     # print(witness[:hyb_solver.lp_solver.n_vars()])

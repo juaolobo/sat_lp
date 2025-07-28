@@ -273,11 +273,11 @@ class BooleanSolver:
                     self.conflict.print_info()
                     return
 
-    def expand_and_learn(self, linear_sol, idx):
+    def expand_and_learn(self, witness, idx):
         
         clause = self.formula.formula[idx]
         # current bug: fixed variables are not remaining fixed in later iterations
-        self.fix_variables(linear_sol)
+        self.fix_variables(witness)
 
         # should break produce a conflict
         new_clauses = []
@@ -307,7 +307,7 @@ class BooleanSolver:
                 self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
 
             self.restart()
-            self.fix_variables(linear_sol)
+            self.fix_variables(witness)
 
         self.restart()
         return new_clauses
