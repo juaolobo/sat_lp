@@ -91,7 +91,7 @@ class SATasLPOptimization(SATasLP):
         # optimization
         for i in range(n_vars):
             if i+1 not in self.fixing.keys():
-                # x_i - y_n+i + y_2n+i = 1/2
+                # x_i - y_i+ + y_i- = 1/2
                 A_eq[i][i] = 1
                 A_eq[i][n_vars+i] = -1
                 A_eq[i][2*n_vars+i] = 1
@@ -112,12 +112,12 @@ class SATasLPOptimization(SATasLP):
 
                 if not is_boolean[i] and i+1 not in self.fixing.keys():
                     if self.last_witness[n_vars+i] < self.last_witness[2*n_vars+i]:
-                        # c[2*n_vars+i] = self.last_witness[n_vars+i]
+                        # x+ < x-
                         c[2*n_vars+i] = 1/2
                     elif self.last_witness[n_vars+i] > self.last_witness[2*n_vars+i]:
-                        # c[n_vars+i] = self.last_witness[2*n_vars+i]
+                        # x- < x+
                         c[n_vars+i] = 1/2
-                    else:
+                    elif self.last_witness[n_vars+i] == self.last_witness[2*n_vars+i]:
                         c[n_vars+i] = self.last_coefs[2*n_vars+i]
                         c[2*n_vars+i] = self.last_coefs[n_vars+i]
                     # need to flip the coef if they are equal, but need last coef for this
@@ -149,6 +149,17 @@ class SATasLPOptimization(SATasLP):
             for i in range(3*n)
         ]
 
+    def coefs_to_witness(self, coefs):
+        
+        n_vars = self.cnf_handler.n_vars
+        witness = []
+        for i in range(n_vars):
+            if coefs[n_vars+i] == 1/2:
+                witness.append(1)
+            elif coefs[2*n_vars+i] == 1/2:
+                witness.append(0)
+
+        return np.array(witness)
 
 class SATasLPOptimization2(SATasLP):
 

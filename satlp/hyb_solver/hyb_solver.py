@@ -157,6 +157,7 @@ class HybridSolver:
         m_clauses = self.cnf_handler.m_clauses
         stops = 0
         solution_history = set()
+        test = set()
         tracking = 0
 
         if verbose:
@@ -164,32 +165,34 @@ class HybridSolver:
 
         c = self.lp_solver.c.copy()
         self.lp_solver.restart(last_coefs=c, last_witness=witness)
+        
         while not self.lp_solver.verify(witness):
             
             last_witness = witness
+            if verbose:
+                print("------------------------------------------------------------")
+                print(f"NUMBER OF DIFFERENT SOLUTIONS: {len(solution_history)} {len(test)}, NUMBER OF CURRENT CYCLE ITERATIONS: {tracking}")
+
+                self.print_verbose(witness)
+
             witness = self.solve_linear()
 
             # INFEASBLE
             if witness is None:
                 return None
 
-
             solution_history.add(tuple(self.lp_solver.c))
+            test.add(tuple(witness))
             tracking += 1
             self.linear_it += 1
 
-            if verbose:
-                print("------------------------------------------------------------")
-                print(f"NUMBER OF DIFFERENT SOLUTIONS: {len(solution_history)}, NUMBER OF CURRENT CYCLE ITERATIONS: {tracking}")
-
-                self.print_verbose(witness)
-
             if len(solution_history) < tracking:
+                
                 sat_idx, unsat_idx = self.lp_solver.get_active_clauses(last_witness)
                 # solve issue in formula uf20-017 where these clauses dont generate conflict
                 # whenever last two terms are equal, that may create a loop
-                dmacs_witness = self.lp_solver.linear_to_witness(witness)
-
+                dmacs_witness = self.lp_solver.linear_to_witness(last_witness)
+                
                 new_clauses = []
                 self.bool_solver.restart()
                 for idx in unsat_idx:
@@ -203,7 +206,7 @@ class HybridSolver:
 
                     new_clauses += learned
                     # if no new clauses are generated, that means that the solution is still expansionable
-
+                print(len(new_clauses))
                 new_clauses = set([tuple(sorted(c, key=abs)) for c in new_clauses])
 
                 for c in new_clauses:
@@ -211,8 +214,12 @@ class HybridSolver:
                     self.cnf_handler.learnt_clauses += 1
                 
                 solution_history = set()
+                test = set()
                 tracking = 0
                 self.boolean_it += 1
+                # self.lp_solver.restart()
+
+                # c = self.lp_solver.c.copy()
                 self.lp_solver.restart()
 
             else:
@@ -221,8 +228,16 @@ class HybridSolver:
 
             self.lp_solver.create_lp()
 
+
+        if verbose:
+            print("------------------------------------------------------------")
+            print(f"NUMBER OF DIFFERENT SOLUTIONS: {len(solution_history)} {len(test)}, NUMBER OF CURRENT CYCLE ITERATIONS: {tracking}")
+
+            self.print_verbose(witness)
+
+
         print("------------------------------------------------------------")
-        print(f"NUMBER OF DIFFERENT SOLUTIONS: {len(solution_history)}, NUMBER OF ITERATIONS: {self.linear_it}")
+        print(f"FINAL NUMBER OF ITERATIONS: {self.linear_it}")
 
 
         return witness      
@@ -252,7 +267,7 @@ class HybridSolver:
                 elif xi == 0:
                     dmacs.add(-i-1)
 
-            solution_history.add(tuple(witness))
+            solution_history.add(tuple(self.lp_solver.c))
             tracking += 1
             last_witness = witness
             self.linear_it += 1
@@ -299,13 +314,14 @@ class HybridSolver:
                 solution_history = set()
                 tracking = 0
                 self.boolean_it += 1
-                self.fixing = dict()
-                self.lp_solver.restart(fixing=self.fixing, last_coefs=None)
+                # self.fixing = dict()
+                self.lp_solver.restart()
 
             # else continue to evolve the linear solution
             else:
                 self.fixing = fixing
-                self.lp_solver.restart(fixing=self.fixing, last_coefs=witness)
+                c = self.lp_solver.c.copy()
+                self.lp_solver.restart(fixing=self.fixing, last_coefs=c, last_witness=witness)
 
             witness = self.solve_linear()
 

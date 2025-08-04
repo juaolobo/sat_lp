@@ -270,7 +270,7 @@ class BooleanSolver:
                 if self.is_sat != 0:
                     # leave this here if it ever happens
                     print("SUPRISE MOTHERFUCKER", self.is_sat)
-                    self.conflict.print_info()
+                    # self.conflict.print_info()
                     return
 
     def expand_and_learn(self, witness, idx):

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 class SATasLP(SATasLPBaseclass):
 
-    def __init__(self, filename=None, cnf_handler=None, method=None, eps=10e-6):
+    def __init__(self, filename=None, cnf_handler=None, method=None, eps=1e-8):
         super().__init__(filename, cnf_handler)
         self.eps = eps
         self.solver = linprog
@@ -23,7 +23,7 @@ class SATasLP(SATasLPBaseclass):
             raise Exception("Solver creation failed")
 
     def solve(self, x0=None):
-
+        
         result = self.solver(
             self.c, 
             x0=x0,
@@ -32,8 +32,9 @@ class SATasLP(SATasLPBaseclass):
             A_ub=self.A_ub, 
             b_ub=self.y_ub, 
             bounds=self.bounds, 
-            method=self.method
+            method=self.method,
         )
+
         res = result.fun
         print(f"LAST OPTIMIZATION RESULT: {res}")
 
@@ -106,19 +107,7 @@ class SATasLP(SATasLPBaseclass):
                 ver_witness[i] = aux
 
         return True
-
-    def linear_to_witness(self, witness):
-        n_vars = self.cnf_handler.n_vars
-        solution = []
-
-        for i in range(n_vars):
-            if self.is_one(witness[i]):
-                solution.append(i+1)
-            elif self.is_zero(witness[i]):
-                solution.append(-i-1)
-
-        return solution
-
+        
     def get_active_clauses(self, partial_witness):
 
         sat_clauses = []
