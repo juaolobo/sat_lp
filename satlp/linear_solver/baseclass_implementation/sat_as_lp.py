@@ -39,7 +39,7 @@ class SATasLP(SATasLPBaseclass):
         print(f"LAST OPTIMIZATION RESULT: {res}")
 
         x = result.x
-
+        
         if result.success:
             witness = np.array(
                 [
@@ -50,10 +50,11 @@ class SATasLP(SATasLPBaseclass):
                 ]
             )
 
-            return witness
+            return witness, res
+
 
         print("INFEASIBLE")
-
+        return None, None
 
     def verify(self, witness):
 

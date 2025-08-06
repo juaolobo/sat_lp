@@ -131,8 +131,6 @@ class SATasLPOptimization(SATasLP):
                     
         else:
             c[2*n_vars:] = 1/2
-
-    
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub
         self.A_ub = A_ub
@@ -155,9 +153,9 @@ class SATasLPOptimization(SATasLP):
         witness = []
         for i in range(n_vars):
             if coefs[n_vars+i] == 1/2:
-                witness.append(1)
+                witness.append(i+1)
             elif coefs[2*n_vars+i] == 1/2:
-                witness.append(0)
+                witness.append(-i-1)
 
         return np.array(witness)
 

@@ -29,7 +29,7 @@ class HybridSolver:
 
     def print_verbose(self, witness):
         n_vars = self.cnf_handler.n_vars
-        dmacs = self.lp_solver.linear_to_witness(witness)
+        dmacs = self.lp_solver.coefs_to_witness(witness)
         print(f"X: {witness[:n_vars]}")
         print(f"X_+: {witness[n_vars:2*n_vars]}")
         print(f"C_+: {self.lp_solver.c[n_vars:2*n_vars]}")
@@ -152,7 +152,7 @@ class HybridSolver:
     def optimize1(self, verbose=False):
 
         it = 0
-        witness = self.solve_linear()
+        witness, res = self.solve_linear()
         n_vars = self.cnf_handler.n_vars
         m_clauses = self.cnf_handler.m_clauses
         stops = 0
@@ -165,6 +165,8 @@ class HybridSolver:
 
         c = self.lp_solver.c.copy()
         self.lp_solver.restart(last_coefs=c, last_witness=witness)
+        min_res = res
+        monotonic = [c]
         
         while not self.lp_solver.verify(witness):
             
@@ -175,8 +177,7 @@ class HybridSolver:
 
                 self.print_verbose(witness)
 
-            witness = self.solve_linear()
-
+            witness, res = self.solve_linear()
             # INFEASBLE
             if witness is None:
                 return None
@@ -191,8 +192,8 @@ class HybridSolver:
                 sat_idx, unsat_idx = self.lp_solver.get_active_clauses(last_witness)
                 # solve issue in formula uf20-017 where these clauses dont generate conflict
                 # whenever last two terms are equal, that may create a loop
-                dmacs_witness = self.lp_solver.linear_to_witness(last_witness)
-                
+                dmacs_witness = self.lp_solver.coefs_to_witness(last_witness)
+
                 new_clauses = []
                 self.bool_solver.restart()
                 for idx in unsat_idx:
@@ -206,7 +207,7 @@ class HybridSolver:
 
                     new_clauses += learned
                     # if no new clauses are generated, that means that the solution is still expansionable
-                print(len(new_clauses))
+
                 new_clauses = set([tuple(sorted(c, key=abs)) for c in new_clauses])
 
                 for c in new_clauses:
@@ -225,8 +226,9 @@ class HybridSolver:
             else:
                 c = self.lp_solver.c.copy()
                 self.lp_solver.restart(last_coefs=c, last_witness=witness)
-
-            self.lp_solver.create_lp()
+                if res < min_res:
+                    monotonic.append(c)
+                    min_res = res
 
 
         if verbose:
@@ -239,6 +241,7 @@ class HybridSolver:
         print("------------------------------------------------------------")
         print(f"FINAL NUMBER OF ITERATIONS: {self.linear_it}")
 
+        print(monotonic)
 
         return witness      
 
