@@ -334,32 +334,33 @@ class HybridSolver:
     def check_unsat(self, current_fixing={}):
 
         n_vars = self.cnf_handler.n_vars
-        c = np.zeros(n_vars)
-        idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
-        decision = np.random.choice(idxs, 1)[0]+1
         witness = [xi if current_fixing[xi] == 1 else -xi for xi in current_fixing.keys()]
+        idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
+
+        # pick a variable from the unassigned ones to test unsatisfiability
+        decision = np.random.choice(idxs, 1)[0] + 1
 
         self.bool_solver.restart()
         expanded_pos = self.bool_solver.expand(witness, decision)
+
         # if positive decision did not lead to a conflict
         if expanded_pos is not None:
             return current_fixing, decision
 
         self.bool_solver.restart()
         expanded_neg = self.bool_solver.expand(witness, -decision)
-        # if positive decision decision led to a conflict and negative didint
+
+        # if positive decision decision led to a conflict and negative didnt
         if expanded_neg is not None:
             return current_fixing, -decision
 
-        # if both decisions led a conflict
+        # if both decisions led a conflict, but no variable was assigned prior
         if current_fixing == {}:
             return None, None
 
-        """ 
-            if both decision led to a conflict, but the fixing was not empty, 
-            that means the current cut is not expansionable
-            we return the decision to learn via the conflict
-        """
+        # if both decision led to a conflict, but the fixing was not empty, 
+        # we cant refine the current cut into a boolean solution
+        # we return the decision to learn via the conflict
         return {}, decision
 
 
@@ -419,18 +420,3 @@ class HybridSolver:
 
         print("UNSATISFIABLE")
         return sat
-
-    def check_linear_conflict(self, witness):
-        conflict = True
-        for i in range(n_vars):
-            if not witness[i].is_integer():
-                aux = witness[i]
-                for w in [0,1]:
-                    witness[i] = w
-                    if (self.lp_solver.A_ub @ witness <= self.lp_solver.y_ub).all():
-                        conflict = False
-                        break
-                witness[i] = aux
-
-        return conflict
-
