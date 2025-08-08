@@ -74,7 +74,7 @@ class SATasLPOptimization(SATasLP):
 
         # construct matrices following Ax >= y
         for i, c in enumerate(clauses):
-            
+
             res_fixed = np.array([self.g(xi) for xi in c if abs(xi) in self.fixing.keys()])
             res = np.array([np.sign(xi) for xi in c if abs(xi) not in self.fixing.keys()])
             y_lb[i] = 1 - sum(res_fixed) - sum(res < 0)
@@ -83,6 +83,7 @@ class SATasLPOptimization(SATasLP):
                 idx = abs(j)-1
                 if abs(j) not in self.fixing.keys():
                     A_lb[i][idx] = np.sign(j).item()
+
 
         # flip signs to get Ax <= y
         y_ub = -y_lb
@@ -98,9 +99,9 @@ class SATasLPOptimization(SATasLP):
                 y_eq[i] = 1/2
 
             # y_n+i + y_2n+i = 1/2
-            A_eq[n_vars+i][n_vars+i] = 1
-            A_eq[n_vars+i][2*n_vars+i] = 1
-            y_eq[n_vars+i] = 1/2
+                A_eq[n_vars+i][n_vars+i] = 1
+                A_eq[n_vars+i][2*n_vars+i] = 1
+                y_eq[n_vars+i] = 1/2
 
         # min x+x- + ...
         c = np.zeros(3*n_vars)
@@ -131,6 +132,9 @@ class SATasLPOptimization(SATasLP):
                     
         else:
             c[2*n_vars:] = 1/2
+
+        c = np.zeros(3*n_vars)
+
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub
         self.A_ub = A_ub
@@ -147,6 +151,17 @@ class SATasLPOptimization(SATasLP):
             for i in range(3*n)
         ]
 
+    def switch(self):
+        n_vars = self.cnf_handler.n_vars
+        for i in range(n_vars):
+            if self.c[n_vars+i] == 1/2:
+                self.c[n_vars+i] = 0
+                self.c[2*n_vars+i] = 1/2
+
+            elif self.c[2*n_vars+i] == 1/2:
+                self.c[2*n_vars+i] = 0
+                self.c[n_vars+i] = 1/2
+
     def coefs_to_witness(self, coefs):
         
         n_vars = self.cnf_handler.n_vars
@@ -159,14 +174,15 @@ class SATasLPOptimization(SATasLP):
 
         return np.array(witness)
 
-class SATasLPOptimization2(SATasLP):
+class SATasLPOptimizationDual(SATasLP):
 
-    def __init__(self, filename=None, cnf_handler=None, fixing={}, last_coefs=None, method='highs-ipm'):
+    def __init__(self, filename=None, cnf_handler=None, fixing={}, method='highs-ipm'):
         super().__init__(filename, cnf_handler, method)
         self.fixing = fixing
-        self.last_coefs = last_coefs
         self.n_vars = cnf_handler.n_vars
         self.m_clauses = cnf_handler.m_clauses
+        self.opt_dim = self.n_vars
+        self.c = None
 
     def _init_objects(self):
         
@@ -195,26 +211,13 @@ class SATasLPOptimization2(SATasLP):
         y_ub = -y_lb
         A_ub = -A_lb
 
-        y_eq = np.zeros(shape=n_vars)
-        A_eq = np.zeros(shape=(n_vars, n_vars))
-
         # optimization
-        # min x.x + ...
-        if self.last_coefs is not None:
-            c = 1-2*self.last_coefs
-
-        else:
-            c = np.zeros(n_vars)
-
-        print(f"C: {c}")
-        print(f"POT: {self.last_coefs}")
-
+        c = np.array([1.0 if i+1 not in self.fixing.keys() else 0 for i in range(n_vars)])
+        self.c = c
+        
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub
         self.A_ub = A_ub
-        self.y_eq = y_eq
-        self.A_eq = A_eq
-        self.c = c
 
     def _create_optimization(self):
 
@@ -223,3 +226,14 @@ class SATasLPOptimization2(SATasLP):
             [0,1]
             for i in range(n)
         ]
+
+    def switch(self, fixing={}):
+        self.c = -self.c
+
+    def lower_opt_dimension(self):
+        self.opt_dim -= 1
+        idxs = [i for i in range(self.n_vars) if self.c[i] != 0]
+        choice = np.random.choice(idxs, 1)
+        self.c[choice] = 0
+            
+

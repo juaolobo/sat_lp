@@ -22,11 +22,10 @@ class SATasLP(SATasLPBaseclass):
         if not self.solver:
             raise Exception("Solver creation failed")
 
-    def solve(self, x0=None):
+    def solve(self):
         
         result = self.solver(
             self.c, 
-            x0=x0,
             A_eq=self.A_eq, 
             b_eq=self.y_eq,
             A_ub=self.A_ub, 
@@ -59,12 +58,14 @@ class SATasLP(SATasLPBaseclass):
     def verify(self, witness):
 
         clauses = self.cnf_handler.clauses
-        ver_witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in witness])
+        n_vars = self.cnf_handler.n_vars
+        ver_witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in witness[:n_vars]])
         for c in clauses:
             abs_c = np.abs(c) 
             idx = abs_c - 1
             sgn = c/abs_c
             res = np.max(ver_witness[idx]*sgn)
+
             if res != 1:
                 return False
 
@@ -109,13 +110,35 @@ class SATasLP(SATasLPBaseclass):
 
         return True
         
+    def get_conflict_clauses(self, partial_witness):
+        sat_clauses = []
+        unsat_clauses = []
+        clauses = self.cnf_handler.clauses
+        n_vars = self.cnf_handler.n_vars
+        witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in partial_witness[:n_vars]])
+
+        for i, c in enumerate(clauses):
+
+            abs_c = np.abs(c) 
+            idx = abs_c - 1
+            sgn = c/abs_c
+            res = np.max(witness[idx]*sgn)
+
+            if res == 1:
+                sat_clauses.append(i)
+            elif res == -1:
+                unsat_clauses.append(i)
+
+        return sat_clauses, unsat_clauses
+
+
     def get_active_clauses(self, partial_witness):
 
         sat_clauses = []
         unsat_clauses = []
         clauses = self.cnf_handler.clauses
-
-        witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in partial_witness])
+        n_vars = self.cnf_handler.n_vars
+        witness = np.array([-1 if xi == 0 else 1 if xi == 1 else 0 for xi in partial_witness[:n_vars]])
 
         for i, c in enumerate(clauses):
 
@@ -141,6 +164,7 @@ class SATasLP(SATasLPBaseclass):
         self._create_optimization()
 
     def restart(self, fixing={}, last_coefs=None, last_witness=None):
+
         self.fixing = fixing
         self.last_coefs = last_coefs
         self.last_witness = last_witness

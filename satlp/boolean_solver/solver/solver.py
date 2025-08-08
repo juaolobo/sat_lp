@@ -210,10 +210,12 @@ class BooleanSolver:
                 # detected unsolvable conflict => UNSAT
                 if learnt_clause is None:
                     return None, None
-                    
+                
+
                 self.formula.add_clause(learnt_clause)
                 self.graph.backtrack(backtrack_level)
                 self.formula.backtrack(backtrack_level, self.graph)
+
                 for xi in learnt_clause.clause:
                     self.formula.repair(-xi, self.graph)
                     self.graph.remove_node(-xi)
@@ -297,6 +299,7 @@ class BooleanSolver:
                 learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
                 # detected unsolvable conflict => UNSAT
                 if learnt_clause is None:
+                    breakpoint()
                     return None
 
                 new_clauses.append(learnt_clause.clause)
@@ -311,6 +314,24 @@ class BooleanSolver:
 
         self.restart()
         return new_clauses
+
+    def expand(self, witness, decision):
+
+        self.fix_variables(witness)
+
+        self.decision_level += 1
+        self.graph.add_node(decision, None, self.decision_level)
+        self.is_sat, self.conflict = self.formula.bcp(decision, self.decision_level, self.graph)
+
+        if self.is_sat == 0:
+            self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+
+        if self.is_sat == 0:
+            return self.graph.assigned_vars
+
+        else:
+            return None
+
 
 """
 -- outline of the algorithm

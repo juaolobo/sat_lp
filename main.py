@@ -3,7 +3,7 @@ import random
 import time
 import argparse, sys
 
-from satlp import HybridSolver, BooleanSolver, SATasLPFeasibility, SATasLPOptimization, SATasLPOptimization2
+from satlp import HybridSolver, BooleanSolver, SATasLPFeasibility, SATasLPOptimization, SATasLPOptimizationDual, CNFLoader
 
 def create_parser():
     parser = argparse.ArgumentParser()
@@ -11,7 +11,7 @@ def create_parser():
         "-m", 
         "--method",
         required=False,
-        default="highs-ipm",
+        default="highs-ds",
         type=str,
         help="'highs-ds'= Use simplex to solve LP. 'highs-ipm' = Use interior poins method to solve LP."
     )
@@ -48,11 +48,12 @@ if __name__ == "__main__":
     filename = args.input_file
     method = args.method
     lp_solver =  SATasLPOptimization if args.type == "optimization" else SATasLPFeasibility
-    # lp_solver =  SATasLPOptimization2
+    lp_solver =  SATasLPOptimizationDual
 
     start = time.time()
     hyb_solver = HybridSolver(filename, lp_solver, method=method, track_history=True)
-    witness = hyb_solver.optimize1(verbose=True)
+    witness = hyb_solver.symmetric_opt()
+    print(witness)
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")
     hyb_solver.verify(witness)
