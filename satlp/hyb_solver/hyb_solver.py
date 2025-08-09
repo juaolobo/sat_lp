@@ -367,17 +367,16 @@ class HybridSolver:
 
 
     def randomized_projection(self, current_fixing={}):
+
         # aka randomized projection via optimization
-        # make a version for the other optimization class
-    
         np.random.seed(1129)
         n_vars = self.cnf_handler.n_vars
-        c = np.zeros(n_vars)
-        # pick a variable from the unassigned ones to test unsatisfiability
-        idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
-        decision = np.random.choice(idxs, 1)
         self.lp_solver.fixing = current_fixing
         self.lp_solver.create_lp()
+
+        # pick a variable from the unassigned ones to try expansion
+        idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
+        decision = np.random.choice(idxs, 1)[0]
 
         self.lp_solver.set_coefs_for_projection(decision, positive=True)
         witness, res = self.lp_solver.solve()
@@ -390,6 +389,7 @@ class HybridSolver:
         self.lp_solver.set_coefs_for_projection(decision, positive=False)
         witness, res = self.lp_solver.solve()
         fixing = self.extract_fixing(witness)
+
         # if positive optimization  led to a conflict and negative didnt
         if len(fixing) > len(current_fixing):
             return fixing, -1
