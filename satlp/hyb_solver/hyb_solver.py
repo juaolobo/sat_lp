@@ -390,15 +390,18 @@ class HybridSolver:
         witness, res = self.lp_solver.solve()
         fixing = self.extract_fixing(witness)
 
-        # if positive optimization  led to a conflict and negative didnt
+        # if positive optimization led to a conflict and negative didnt
         if len(fixing) > len(current_fixing):
             return fixing, -1
 
-        # if the initial fixing is empty => formula if unsat
+        # if positive and negative led to a conflict
+        # and the initial fixing is empty => formula is unsat
         if current_fixing == {}:
             return None, None
 
-        # else there is no way to further expand the current fixing with this decision
+        # if both decisions led to a conflict, but the fixing was not empty, 
+        # we cant refine the current cut into a boolean solution
+        # we return the decision to learn via the conflict
         return {}, decision
 
 
