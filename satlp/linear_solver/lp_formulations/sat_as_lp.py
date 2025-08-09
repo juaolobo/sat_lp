@@ -114,10 +114,10 @@ class SATasLPOptimization(SATasLP):
                 if not is_boolean[i] and i+1 not in self.fixing.keys():
                     if self.last_witness[n_vars+i] < self.last_witness[2*n_vars+i]:
                         # x+ < x-
-                        c[2*n_vars+i] = 1/2
+                        c[2*n_vars+i] = 1
                     elif self.last_witness[n_vars+i] > self.last_witness[2*n_vars+i]:
                         # x- < x+
-                        c[n_vars+i] = 1/2
+                        c[n_vars+i] = 1
                     elif self.last_witness[n_vars+i] == self.last_witness[2*n_vars+i]:
                         c[n_vars+i] = self.last_coefs[2*n_vars+i]
                         c[2*n_vars+i] = self.last_coefs[n_vars+i]
@@ -125,13 +125,13 @@ class SATasLPOptimization(SATasLP):
                         
                 elif is_boolean[i] and i+1 not in self.fixing.keys():
                     if self.is_one(self.last_witness[i]):
-                        c[2*n_vars+i] = 1/2
+                        c[2*n_vars+i] = 1
 
                     elif self.is_zero(self.last_witness[i]):
-                        c[n_vars+i] = 1/2
+                        c[n_vars+i] = 1
                     
         else:
-            c[2*n_vars:] = 1/2
+            c[2*n_vars:] = 1
 
         c = np.zeros(3*n_vars)
 
@@ -174,7 +174,17 @@ class SATasLPOptimization(SATasLP):
 
         return np.array(witness)
 
-class SATasLPOptimizationDual(SATasLP):
+    def set_coefs_for_projection(self, decision, positive=True):
+
+        c = np.zeros(3*n_vars)
+        if positive:
+            c[n_vars+decision] = 1/2
+
+        else:
+            c[2*n_vars+decision] = 1/2
+        self.c = c
+
+class SATasLPOptimizationSymmetric(SATasLP):
 
     def __init__(self, filename=None, cnf_handler=None, fixing={}, method='highs-ipm'):
         super().__init__(filename, cnf_handler, method)
@@ -229,11 +239,10 @@ class SATasLPOptimizationDual(SATasLP):
 
     def switch(self, fixing={}):
         self.c = -self.c
-
-    def lower_opt_dimension(self):
-        self.opt_dim -= 1
-        idxs = [i for i in range(self.n_vars) if self.c[i] != 0]
-        choice = np.random.choice(idxs, 1)
-        self.c[choice] = 0
             
 
+    def set_coefs_for_projection(self, decision, positive=True):
+
+        c = np.zeros(n_vars)
+        c[decision] = 1 if positive else -1
+        self.c = c

@@ -282,9 +282,11 @@ class HybridSolver:
                     return None, None
 
                 fixing_one = self.extract_fixing(witness_one)
-                # detects degeneracy (no boolean coordinates) => lower optimization dimension
+                # detects degeneracy (no boolean coordinates) => lower optimization dimension to 1
                 if fixing_one == fixing_zero:
-                    fixing, decision = self.check_unsat(fixing_zero)
+                    # check unsat via randomized projection
+                    fixing, decision = self.randomized_projection(current_fixing=fixing_zero)
+
                     # UNSAT
                     if fixing == None:
                         return None, None
@@ -337,7 +339,7 @@ class HybridSolver:
         witness = [xi if current_fixing[xi] == 1 else -xi for xi in current_fixing.keys()]
         idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
 
-        # pick a variable from the unassigned ones to test unsatisfiability
+        # pick a variable from the unassigned ones to try expansion
         decision = np.random.choice(idxs, 1)[0] + 1
 
         self.bool_solver.restart()
@@ -358,39 +360,37 @@ class HybridSolver:
         if current_fixing == {}:
             return None, None
 
-        # if both decision led to a conflict, but the fixing was not empty, 
+        # if both decisions led to a conflict, but the fixing was not empty, 
         # we cant refine the current cut into a boolean solution
         # we return the decision to learn via the conflict
         return {}, decision
 
 
-    def _check_unsat(self, current_fixing={}):
-        
+    def randomized_projection(self, current_fixing={}):
+        # aka randomized projection via optimization
+        # make a version for the other optimization class
+    
         np.random.seed(1129)
         n_vars = self.cnf_handler.n_vars
         c = np.zeros(n_vars)
+        # pick a variable from the unassigned ones to test unsatisfiability
         idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
         decision = np.random.choice(idxs, 1)
-
-        c[decision] = 1
         self.lp_solver.fixing = current_fixing
         self.lp_solver.create_lp()
-        self.lp_solver.c = c
+
+        self.lp_solver.set_coefs_for_projection(decision, positive=True)
         witness, res = self.lp_solver.solve()
         fixing = self.extract_fixing(witness)
-        print(witness)
+
+        # if positive optimization did not lead to a conflict
         if len(fixing) > len(current_fixing):
             return fixing, -1
                 
-        c[decision] = -1
-        self.lp_solver.fixing = current_fixing
-        self.lp_solver.create_lp()
-        self.lp_solver.c = c
-        breakpoint()
+        self.lp_solver.set_coefs_for_projection(decision, positive=False)
         witness, res = self.lp_solver.solve()
         fixing = self.extract_fixing(witness)
-        print(witness)
-
+        # if positive optimization  led to a conflict and negative didnt
         if len(fixing) > len(current_fixing):
             return fixing, -1
 
