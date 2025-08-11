@@ -310,10 +310,12 @@ class HybridSolver:
         zero_sat = False
         one_sat = False 
 
-        # add randomized projection at the start once
+        # add randomized projection at the start once to encourage exploration
         self.lp_solver.fixing = {}
-        decision = np.random.choice([i for i in range(n_vars)], 1)[0].item()
+        possible_picks = [i for i in range(n_vars)]
+        decision = np.random.choice(possible_picks, 1)[0].item()
         self.lp_solver.create_lp()
+
         self.lp_solver.set_coefs_for_projection(decision, positive=True)
         witness, res = self.lp_solver.solve()
         fixing_zero = self.extract_fixing(witness)
@@ -365,101 +367,6 @@ class HybridSolver:
                     # UNSAT
                     if fixing == None:
                         return [(None, None)]
-
-                    # unable to improve current cut
-                    if fixing == {}:
-                        possible_cuts.append((_fixing, decision))
-
-                    else:
-                        if _fixing == fixing_zero:
-                            fixing_zero = fixing
-                        else:
-                            fixing_one = fixing
-
-                if len(possible_cuts) == 2:
-                    return possible_cuts
-
-            else:
-                fixing_zero = _fixing_zero
-                fixing_one = _fixing_one
-            
-        # SAT
-        witness = witness_one if one_sat == True else witness_zero
-        fixing = self.extract_fixing(witness)
-
-        return [(fixing, None)]
-
-
-    def generate_cut_symm_parallel2(self, verbose=False):
-
-        n_vars = self.cnf_handler.n_vars
-        witness_zero = None # placeholder for entering the loop
-        witness_one = None # placeholder for entering the loop
-        fixing_one = {}
-        fixing_zero = {}
-        zero_sat = False
-        one_sat = False
-        history_zero = set()
-        distinct_zero = 0 
-        history_one = set()
-        distinct_one = 0
-
-        while zero_sat is False or one_sat is False:
-            
-            # MAX-0
-            # solve opt for maximum number of zeros: min sum(z_i)
-            # switch obj function back to MAX-0 and fix ones (and zeros) found in previous step
-            print(f"RUNNING MAX-ZERO WITH FIXING_ONE: {fixing_one}")
-            witness_zero, res_zero = self.solve_linear(switch=False, fixing=fixing_one)
-            # INFEASIBLE => UNSAT
-            if witness_zero is None:
-                return None, None
-
-            # MAX-1
-            # solve opt for maximum number of ones: min -sum(z_i)
-            # switch obj function to MAX-1 and fix zeros found in previous step
-            print(f"RUNNING MAX-ONE WITH FIXING_ZERO: {fixing_zero}")
-            witness_one, res_one = self.solve_linear(switch=True, fixing=fixing_zero)
-
-            # INFEASIBLE => UNSAT
-            if witness_one is None:
-                return None, None
-
-            zero_sat = self.lp_solver.verify(witness_zero)
-            one_sat = self.lp_solver.verify(witness_one)
-
-            if zero_sat is True or one_sat is True:
-                break
-
-            _fixing_zero = {i+1: 0 for i in range(n_vars) if witness_zero[i] == 0}
-            _fixing_one = {i+1: 1 for i in range(n_vars) if witness_one[i] == 1}
-            history_zero.add(tuple(fixing_zero.keys()))
-            distinct_zero += 1
-
-            history_one.add(tuple(fixing_one.keys()))
-            distinct_one += 1
-            # _fixing_zero = self.extract_fixing(witness_zero)
-            # _fixing_one = self.extract_fixing(witness_one)
-
-            # detects degeneracy (no new boolean coordinates) => lower optimization dimension to 1
-            # produce two cuts or learn a new coordinate and continue the optimization
-
-            if len(history_zero) < distinct_zero and len(history_one) < distinct_one:
-
-                history_zero = set()
-                distinct_zero = 0 
-                history_one = set()
-                distinct_one = 0
-
-                possible_cuts = []
-                # _fixing mutates fixing_{zero, one} in this loop
-                for _fixing in [fixing_one, fixing_zero]:
-                    # check unsat via randomized projection
-                    fixing, decision = self.randomized_projection(current_fixing=_fixing)
-
-                    # UNSAT
-                    if fixing == None:
-                        return None, None
 
                     # unable to improve current cut
                     if fixing == {}:
@@ -578,20 +485,16 @@ class HybridSolver:
 
         generate_cut = self.generate_cut_symm_parallel
         while True:
+
             possible_cuts = generate_cut()
             
             if len(possible_cuts) == 2: 
                 new_clauses = []
-
-                if possible_cuts[0] == possible_cuts[1]:
-                    possible_cuts = [possible_cuts[0]]
-
                 for cut, decision in possible_cuts:
                     # learn via conflict
                     learned_pos = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), decision)
                     learned_neg = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), -decision)
                     new_clauses += set(learned_pos + learned_neg)
-
 
                 for c in new_clauses:
                     self.cnf_handler.add_clause(c)
