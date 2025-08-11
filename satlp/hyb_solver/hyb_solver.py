@@ -58,9 +58,10 @@ class HybridSolver:
 
         self.lp_solver.fixing = fixing
         self.lp_solver.create_lp()
+
         if switch == True:
             self.lp_solver.switch()
-        print(self.lp_solver.c)
+
         return self.lp_solver.solve()
 
     def solve_boolean(self):
@@ -154,7 +155,7 @@ class HybridSolver:
         print(f"Finished in {it} iterations")
         return witness
 
-    def optimize1(self, verbose=False):
+    def optimize(self, verbose=False):
 
         it = 0
         witness, res = self.solve_linear()
@@ -167,7 +168,6 @@ class HybridSolver:
 
         if verbose:
             self.print_verbose(witness)
-            exit(0)
 
         c = self.lp_solver.c.copy()
         self.lp_solver.restart(last_coefs=c, last_witness=witness)
@@ -195,8 +195,6 @@ class HybridSolver:
 
             if len(solution_history) < tracking:
                 sat_idx, unsat_idx = self.lp_solver.get_active_clauses(last_witness)
-                # solve issue in formula uf20-017 where these clauses dont generate conflict
-                # whenever last two terms are equal, that may create a loop
                 dmacs_witness = self.lp_solver.coefs_to_witness(last_witness)
 
                 new_clauses = []
@@ -247,45 +245,217 @@ class HybridSolver:
 
         print(monotonic)
 
-        return witness      
+        return witness
 
-    def symmetric_opt(self, verbose=False):
 
-        def generate_cut():
+    def generate_cut_symm_seq(self, verbose=False):
 
-            n_vars = self.cnf_handler.n_vars
-            witness = np.zeros(n_vars) # placeholder for entering the loop
-            fixing_one = {}
-            fixing_zero = {}
+        n_vars = self.cnf_handler.n_vars
+        witness = None # placeholder for entering the loop
+        fixing_one = {}
+        fixing_zero = {}
 
-            while not self.lp_solver.verify(witness):
+        while not self.lp_solver.verify(witness):
 
-                # MAX-0
-                # solve opt for maximum number of zeros: min sum(z_i)
-                # switch obj function back to MAX-0 and fix ones (and zeros) found in previous step
-                print(f"RUNNING MAX-ZERO WITH FIXING_ONE: {fixing_one}")
-                witness_zero, res_zero = self.solve_linear(switch=False, fixing=fixing_one)
+            # MAX-0
+            # solve opt for maximum number of zeros: min sum(z_i)
+            # switch obj function back to MAX-0 and fix ones (and zeros) found in previous step
+            # print(f"RUNNING MAX-ZERO WITH FIXING_ONE: {fixing_one}")
+            witness_zero, res_zero = self.solve_linear(switch=False, fixing=fixing_one)
 
-                # INFEASIBLE => UNSAT
-                if witness_zero is None:
+            # INFEASIBLE => UNSAT
+            if witness_zero is None:
+                return None, None
+
+            fixing_zero = self.extract_fixing(witness_zero)
+            # MAX-1
+            # solve opt for maximum number of ones: min -sum(z_i)
+            # switch obj function to MAX-1 and fix zeros found in previous step
+            # print(f"RUNNING MAX-ONE WITH FIXING_ZERO: {fixing_zero}")
+            witness_one, res_one = self.solve_linear(switch=True, fixing=fixing_zero)
+
+            # INFEASIBLE => UNSAT
+            if witness_one is None:
+                return None, None
+
+            fixing_one = self.extract_fixing(witness_one)
+            # detects degeneracy (no boolean coordinates) => lower optimization dimension to 1
+
+            if fixing_one == fixing_zero:
+                # check unsat via randomized projection
+                fixing, decision = self.randomized_projection(current_fixing=fixing_zero)
+                # UNSAT
+                if fixing == None:
                     return None, None
 
-                fixing_zero = self.extract_fixing(witness_zero)
-                # MAX-1
-                # solve opt for maximum number of ones: min -sum(z_i)
-                # switch obj function to MAX-1 and fix zeros found in previous step
-                print(f"RUNNING MAX-ONE WITH FIXING_ZERO: {fixing_zero}")
-                witness_one, res_one = self.solve_linear(switch=True, fixing=fixing_zero)
+                # unable to improve current cut
+                if fixing == {}:
+                    return fixing_zero, decision
 
-                # INFEASIBLE => UNSAT
-                if witness_one is None:
-                    return None, None
+                fixing_one = fixing
 
-                fixing_one = self.extract_fixing(witness_one)
-                # detects degeneracy (no boolean coordinates) => lower optimization dimension to 1
-                if fixing_one == fixing_zero:
+            witness = witness_one
+
+        # SAT
+        fixing = self.extract_fixing(witness)
+        return fixing, None
+
+    def generate_cut_symm_parallel(self, verbose=False):
+
+        n_vars = self.cnf_handler.n_vars
+        witness_zero = None # placeholder for entering the loop
+        witness_one = None # placeholder for entering the loop
+        fixing_one = {}
+        fixing_zero = {}
+        zero_sat = False
+        one_sat = False 
+
+        # add randomized projection at the start once
+        self.lp_solver.fixing = {}
+        decision = np.random.choice([i for i in range(n_vars)], 1)[0].item()
+        self.lp_solver.create_lp()
+        self.lp_solver.set_coefs_for_projection(decision, positive=True)
+        witness, res = self.lp_solver.solve()
+        fixing_zero = self.extract_fixing(witness)
+
+        self.lp_solver.set_coefs_for_projection(decision, positive=False)
+        witness, res = self.lp_solver.solve()
+        fixing_one = self.extract_fixing(witness)
+
+        while zero_sat is False or one_sat is False:
+            
+            # MAX-0
+            # solve opt for maximum number of zeros: min sum(z_i)
+            # switch obj function back to MAX-0 and fix ones (and zeros) found in previous step
+            print(f"RUNNING MAX-ZERO WITH FIXING_ONE: {fixing_one}")
+            witness_zero, res_zero = self.solve_linear(switch=False, fixing=fixing_one)
+            # INFEASIBLE => UNSAT
+            if witness_zero is None:
+                return [(None, None)]
+
+            # MAX-1
+            # solve opt for maximum number of ones: min -sum(z_i)
+            # switch obj function to MAX-1 and fix zeros found in previous step
+            print(f"RUNNING MAX-ONE WITH FIXING_ZERO: {fixing_zero}")
+            witness_one, res_one = self.solve_linear(switch=True, fixing=fixing_zero)
+
+            # INFEASIBLE => UNSAT
+            if witness_one is None:
+                return [(None, None)]
+
+            zero_sat = self.lp_solver.verify(witness_zero)
+            one_sat = self.lp_solver.verify(witness_one)
+
+            if zero_sat is True or one_sat is True:
+                break
+
+            _fixing_zero = self.extract_fixing(witness_zero)
+            _fixing_one = self.extract_fixing(witness_one)
+
+            # detects degeneracy (no new boolean coordinates) => lower optimization dimension to 1
+            # produce two cuts or learn a new coordinate and continue the optimization
+
+            if fixing_zero == _fixing_one and fixing_one == _fixing_zero:
+                possible_cuts = []
+                # _fixing mutates fixing_{zero, one} in this loop
+                for _fixing in [fixing_one, fixing_zero]:
                     # check unsat via randomized projection
-                    fixing, decision = self.randomized_projection(current_fixing=fixing_zero)
+                    fixing, decision = self.randomized_projection(current_fixing=_fixing)
+
+                    # UNSAT
+                    if fixing == None:
+                        return [(None, None)]
+
+                    # unable to improve current cut
+                    if fixing == {}:
+                        possible_cuts.append((_fixing, decision))
+
+                    else:
+                        if _fixing == fixing_zero:
+                            fixing_zero = fixing
+                        else:
+                            fixing_one = fixing
+
+                if len(possible_cuts) == 2:
+                    return possible_cuts
+
+            else:
+                fixing_zero = _fixing_zero
+                fixing_one = _fixing_one
+            
+        # SAT
+        witness = witness_one if one_sat == True else witness_zero
+        fixing = self.extract_fixing(witness)
+
+        return [(fixing, None)]
+
+
+    def generate_cut_symm_parallel2(self, verbose=False):
+
+        n_vars = self.cnf_handler.n_vars
+        witness_zero = None # placeholder for entering the loop
+        witness_one = None # placeholder for entering the loop
+        fixing_one = {}
+        fixing_zero = {}
+        zero_sat = False
+        one_sat = False
+        history_zero = set()
+        distinct_zero = 0 
+        history_one = set()
+        distinct_one = 0
+
+        while zero_sat is False or one_sat is False:
+            
+            # MAX-0
+            # solve opt for maximum number of zeros: min sum(z_i)
+            # switch obj function back to MAX-0 and fix ones (and zeros) found in previous step
+            print(f"RUNNING MAX-ZERO WITH FIXING_ONE: {fixing_one}")
+            witness_zero, res_zero = self.solve_linear(switch=False, fixing=fixing_one)
+            # INFEASIBLE => UNSAT
+            if witness_zero is None:
+                return None, None
+
+            # MAX-1
+            # solve opt for maximum number of ones: min -sum(z_i)
+            # switch obj function to MAX-1 and fix zeros found in previous step
+            print(f"RUNNING MAX-ONE WITH FIXING_ZERO: {fixing_zero}")
+            witness_one, res_one = self.solve_linear(switch=True, fixing=fixing_zero)
+
+            # INFEASIBLE => UNSAT
+            if witness_one is None:
+                return None, None
+
+            zero_sat = self.lp_solver.verify(witness_zero)
+            one_sat = self.lp_solver.verify(witness_one)
+
+            if zero_sat is True or one_sat is True:
+                break
+
+            _fixing_zero = {i+1: 0 for i in range(n_vars) if witness_zero[i] == 0}
+            _fixing_one = {i+1: 1 for i in range(n_vars) if witness_one[i] == 1}
+            history_zero.add(tuple(fixing_zero.keys()))
+            distinct_zero += 1
+
+            history_one.add(tuple(fixing_one.keys()))
+            distinct_one += 1
+            # _fixing_zero = self.extract_fixing(witness_zero)
+            # _fixing_one = self.extract_fixing(witness_one)
+
+            # detects degeneracy (no new boolean coordinates) => lower optimization dimension to 1
+            # produce two cuts or learn a new coordinate and continue the optimization
+
+            if len(history_zero) < distinct_zero and len(history_one) < distinct_one:
+
+                history_zero = set()
+                distinct_zero = 0 
+                history_one = set()
+                distinct_one = 0
+
+                possible_cuts = []
+                # _fixing mutates fixing_{zero, one} in this loop
+                for _fixing in [fixing_one, fixing_zero]:
+                    # check unsat via randomized projection
+                    fixing, decision = self.randomized_projection(current_fixing=_fixing)
 
                     # UNSAT
                     if fixing == None:
@@ -293,45 +463,265 @@ class HybridSolver:
 
                     # unable to improve current cut
                     if fixing == {}:
-                        return fixing_zero, decision
+                        possible_cuts.append((_fixing, decision))
 
-                    fixing[abs(decision)] = 1 if decision > 0 else 0
-                    fixing_one = fixing
+                    else:
+                        if _fixing == fixing_zero:
+                            fixing_zero = fixing
+                        else:
+                            fixing_one = fixing
 
-                witness = witness_one
+                if len(possible_cuts) == 2:
+                    return possible_cuts
 
-            # SAT
-            return fixing_zero, None
+            else:
+                fixing_zero = _fixing_zero
+                fixing_one = _fixing_one
+            
+        # SAT
+        witness = witness_one if one_sat == True else witness_zero
+        fixing = self.extract_fixing(witness)
 
-        witness, res = self.solve_linear()
-        print(self.check_unsat({}))
-        cut = {}
-        cut, conf_decision = generate_cut()
+        return [(fixing, None)]
+
+    def generate_cut_symm_no_fixing(self, verbose=False):
+
         n_vars = self.cnf_handler.n_vars
-        breakpoint()
-        while len(cut) < n_vars:
-            if cut == None:
+        witness_zero = None # placeholder for entering the loop
+        witness_one = None # placeholder for entering the loop
+        fixing_one = {}
+        fixing_zero = {}
+        zero_sat = False
+        one_sat = False
+
+        while zero_sat is False or one_sat is False:
+            
+            # MAX-0
+            # solve opt for maximum number of zeros: min sum(z_i)
+            # switch obj function back to MAX-0 and fix ones (and zeros) found in previous step
+            print(f"RUNNING MAX-ZERO WITH FIXING_ONE: {fixing_one}")
+            self.lp_solver.create_lp()
+            if witness_zero is not None:
+                c = [1 if i != 1 else 0 for i in witness_one]
+            else:
+                c = np.ones(n_vars)
+
+            self.lp_solver.c = c
+            witness_zero, res_zero = self.lp_solver.solve()
+            # INFEASIBLE => UNSAT
+            if witness_zero is None:
+                return None, None
+
+            # MAX-1
+            # solve opt for maximum number of ones: min -sum(z_i)
+            # switch obj function to MAX-1 and fix zeros found in previous step
+            print(f"RUNNING MAX-ONE WITH FIXING_ZERO: {fixing_zero}")
+            self.lp_solver.create_lp()
+            if witness_one is not None:
+                c = [-1 if i != 0 else 0 for i in witness_zero]
+            else:
+                c = np.ones(n_vars)
+
+            self.lp_solver.c = c
+            witness_one, res_one = self.lp_solver.solve()
+
+            print(witness_zero)
+            print(witness_one)
+            # INFEASIBLE => UNSAT
+            if witness_one is None:
+                return None, None
+
+            zero_sat = self.lp_solver.verify(witness_zero)
+            one_sat = self.lp_solver.verify(witness_one)
+
+            if zero_sat is True or one_sat is True:
+                break
+
+            # detects degeneracy (no new boolean coordinates) => lower optimization dimension to 1
+            # produce two cuts or learn a new coordinate and continue the optimization
+            
+        # SAT
+        witness = witness_one if one_sat == True else witness_zero
+        fixing = self.extract_fixing(witness)
+
+        return (fixing, None)
+
+    def test(self):
+        cut, decision = self.generate_cut_symm_no_fixing()
+
+        return self.cut_to_linear(cut)
+
+    def symmetric_opt_seq(self):
+
+        n_vars = self.cnf_handler.n_vars
+        while True:
+            cut, decision = self.generate_cut_symm_seq()
+            if cut is None:
                 return None
 
-            breakpoint()
-            # learn from cut
+            if len(cut) == n_vars:
+                witness = self.cut_to_linear(cut)
+                if self.lp_solver.verify(witness):
+                    return witness
 
-        return cut
-        
+            else:
+                # learn via conflict
+                learned_pos = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), decision)
+                learned_neg = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), -decision)
+                new_clauses = set(learned_pos + learned_neg)
+                print(new_clauses)
+                for c in new_clauses:
+                    self.cnf_handler.add_clause(c)
+                    self.cnf_handler.learnt_clauses += 1
+
+    def symmetric_opt_parallel(self, verbose=False):
+
+        generate_cut = self.generate_cut_symm_parallel
+        while True:
+            possible_cuts = generate_cut()
+            
+            if len(possible_cuts) == 2: 
+                new_clauses = []
+
+                if possible_cuts[0] == possible_cuts[1]:
+                    possible_cuts = [possible_cuts[0]]
+
+                for cut, decision in possible_cuts:
+                    # learn via conflict
+                    learned_pos = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), decision)
+                    learned_neg = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), -decision)
+                    new_clauses += set(learned_pos + learned_neg)
+
+
+                for c in new_clauses:
+                    self.cnf_handler.add_clause(c)
+                    self.cnf_handler.learnt_clauses += 1
+
+            else:
+                cut, _ = possible_cuts[0]
+
+                if cut is None:
+                    return None
+                
+                witness = self.cut_to_linear(cut)
+                if self.lp_solver.verify(witness):
+                    return witness
+
+
+    def generate_feas_cut(self):
+
+        fixing = {}
+        n_vars = self.cnf_handler.n_vars
+        while True:
+            witness, res = self.solve_linear(fixing=fixing)
+            _fixing = self.extract_fixing(witness)
+            
+            if fixing == _fixing:
+
+                if len(_fixing) == n_vars:
+                    return fixing, None
+                print(_fixing)
+                _fixing, decision = self.randomized_projection(current_fixing=_fixing)
+
+                # UNSAT
+                if _fixing == None:
+                    return None, None
+
+                # unable to improve current cut
+                if _fixing == {}:
+                    return fixing, decision
+
+            fixing = _fixing
+
+        return fixing
+
+    def feas_opt(self):
+        n_vars = self.cnf_handler.n_vars
+        while True:
+            cut, decision = self.generate_feas_cut()
+            if cut is None:
+                return None
+
+            if len(cut) == n_vars:
+                witness = self.cut_to_linear(cut)
+                if self.lp_solver.verify(witness):
+                    return witness
+
+            else:
+                # learn via conflict
+                learned_pos = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), decision)
+                learned_neg = self.bool_solver.expand_and_learn(self.cut_to_witness(cut), -decision)
+                new_clauses = set(learned_pos + learned_neg)
+                print(new_clauses)
+                for c in new_clauses:
+                    self.cnf_handler.add_clause(c)
+                    self.cnf_handler.learnt_clauses += 1
+
+
+    def cut_to_linear(self, cut):
+        n_vars = self.cnf_handler.n_vars
+        linear = [cut[i+1] for i in range(n_vars)]
+
+        return linear
 
     def linear_to_witness(self, linear_sol):
-        witness = [witness[i] for i in range(n_vars) if witness[i].is_integer()]
+        n_vars = self.cnf_handler.n_vars
+        witness = [i+1 if linear_sol[i]== 1 else -i-1 for i in range(n_vars) if linear_sol[i].is_integer()]
 
+        return witness
+
+    def cut_to_witness(self, cut):
+        witness = [xi if cut[xi] == 1 else -xi for xi in cut.keys()]
+        return witness
 
     def extract_fixing(self, witness):
         n_vars = self.cnf_handler.n_vars
         fixing = {
             i+1: witness[i].item()
             for i in range(n_vars) 
-            if i < n_vars and witness[i].is_integer()
+            if witness[i].is_integer()
         }
 
         return fixing
+
+    def randomized_projection(self, current_fixing={}):
+
+
+        # aka randomized projection via optimization
+        n_vars = self.cnf_handler.n_vars
+        self.lp_solver.fixing = current_fixing
+        self.lp_solver.create_lp()
+
+        # pick a variable from the unassigned ones to try expansion
+        idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
+        decision = np.random.choice(idxs, 1)[0]
+
+        self.lp_solver.set_coefs_for_projection(decision, positive=True)
+        witness, res = self.lp_solver.solve()
+        fixing = self.extract_fixing(witness)
+
+        # if positive optimization did not lead to a conflict
+        if len(fixing) > len(current_fixing):
+            return fixing, -1
+                
+        self.lp_solver.set_coefs_for_projection(decision, positive=False)
+        witness, res = self.lp_solver.solve()
+        fixing = self.extract_fixing(witness)
+
+        # if positive optimization led to a conflict and negative didnt
+        if len(fixing) > len(current_fixing):
+            return fixing, -1
+
+        # if positive and negative led to a conflict
+        # and the initial fixing is empty => formula is unsat
+        if current_fixing == {}:
+            return None, None
+
+        # if both decisions led to a conflict, but the fixing was not empty, 
+        # we cant refine the current cut into a boolean solution
+        # we return the decision to learn via the conflict
+
+        return {}, abs(decision)+1
 
     def check_unsat(self, current_fixing={}):
 
@@ -365,46 +755,6 @@ class HybridSolver:
         # we return the decision to learn via the conflict
         return {}, decision
 
-
-    def randomized_projection(self, current_fixing={}):
-
-        # aka randomized projection via optimization
-        np.random.seed(1129)
-        n_vars = self.cnf_handler.n_vars
-        self.lp_solver.fixing = current_fixing
-        self.lp_solver.create_lp()
-
-        # pick a variable from the unassigned ones to try expansion
-        idxs = [i for i in range(n_vars) if i+1 not in current_fixing.keys()]
-        decision = np.random.choice(idxs, 1)[0]
-
-        self.lp_solver.set_coefs_for_projection(decision, positive=True)
-        witness, res = self.lp_solver.solve()
-        fixing = self.extract_fixing(witness)
-
-        # if positive optimization did not lead to a conflict
-        if len(fixing) > len(current_fixing):
-            return fixing, -1
-                
-        self.lp_solver.set_coefs_for_projection(decision, positive=False)
-        witness, res = self.lp_solver.solve()
-        fixing = self.extract_fixing(witness)
-
-        # if positive optimization led to a conflict and negative didnt
-        if len(fixing) > len(current_fixing):
-            return fixing, -1
-
-        # if positive and negative led to a conflict
-        # and the initial fixing is empty => formula is unsat
-        if current_fixing == {}:
-            return None, None
-
-        # if both decisions led to a conflict, but the fixing was not empty, 
-        # we cant refine the current cut into a boolean solution
-        # we return the decision to learn via the conflict
-        return {}, decision
-
-
     def verify(self, witness):
         
         sat = False
@@ -413,7 +763,7 @@ class HybridSolver:
             sat = self.lp_solver.verify(witness[:n_vars])
             if sat is True:
                 print("SATISFIABLE")
-                witness = self.lp_solver.coefs_to_witness(witness)
+                witness = self.linear_to_witness(witness)
                 print(f"WITNESS: {witness[:n_vars]}")
 
             else:

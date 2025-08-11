@@ -40,6 +40,15 @@ class SATasLPFeasibility(SATasLP):
     def _create_optimization(self):
         self.bounds = [0,1]
 
+    def switch(self):
+        pass
+
+    def set_coefs_for_projection(self, decision, positive=True):
+        n_vars = self.cnf_handler.n_vars
+        c = np.zeros(n_vars)
+        c[decision] = 1 if positive else -1
+        self.c = c
+
 
 class SATasLPOptimization(SATasLP):
 
@@ -133,8 +142,6 @@ class SATasLPOptimization(SATasLP):
         else:
             c[2*n_vars:] = 1
 
-        c = np.zeros(3*n_vars)
-
         # scipy linprog deals with only minimization of upperbounded matrices 
         self.y_ub = y_ub
         self.A_ub = A_ub
@@ -184,7 +191,7 @@ class SATasLPOptimization(SATasLP):
             c[2*n_vars+decision] = 1/2
         self.c = c
 
-class SATasLPOptimizationSymmetric(SATasLP):
+class SATasLPOptimizationDual(SATasLP):
 
     def __init__(self, filename=None, cnf_handler=None, fixing={}, method='highs-ipm'):
         super().__init__(filename, cnf_handler, method)
@@ -203,7 +210,6 @@ class SATasLPOptimizationSymmetric(SATasLP):
         # Ax <= y
         y_lb = np.zeros(shape=m_clauses)
         A_lb = np.zeros(shape=(m_clauses, n_vars))
-
 
         # construct matrices following Ax >= y
         for i, c in enumerate(clauses):
@@ -237,12 +243,11 @@ class SATasLPOptimizationSymmetric(SATasLP):
             for i in range(n)
         ]
 
-    def switch(self, fixing={}):
+    def switch(self):
         self.c = -self.c
-            
 
     def set_coefs_for_projection(self, decision, positive=True):
-
+        n_vars = self.cnf_handler.n_vars
         c = np.zeros(n_vars)
         c[decision] = 1 if positive else -1
         self.c = c

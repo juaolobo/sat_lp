@@ -35,7 +35,7 @@ class SATasLP(SATasLPBaseclass):
         )
 
         res = result.fun
-        print(f"LAST OPTIMIZATION RESULT: {res}")
+        # print(f"LAST OPTIMIZATION RESULT: {res}")
 
         x = result.x
         
@@ -56,6 +56,9 @@ class SATasLP(SATasLPBaseclass):
         return None, None
 
     def verify(self, witness):
+
+        if witness is None:
+            return False
 
         clauses = self.cnf_handler.clauses
         n_vars = self.cnf_handler.n_vars

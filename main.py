@@ -47,12 +47,18 @@ if __name__ == "__main__":
 
     filename = args.input_file
     method = args.method
-    lp_solver =  SATasLPOptimization if args.type == "optimization" else SATasLPFeasibility
+    # lp_solver =  SATasLPOptimization if args.type == "optimization" else SATasLPFeasibility
+    # lp_solver =  SATasLPOptimization
     lp_solver =  SATasLPOptimizationDual
+    # lp_solver =  SATasLPFeasibility
 
     start = time.time()
     hyb_solver = HybridSolver(filename, lp_solver, method=method, track_history=True)
-    witness = hyb_solver.symmetric_opt()
+    # witness = hyb_solver.symmetric_opt_seq()
+    witness = hyb_solver.symmetric_opt_parallel()
+    # witness = hyb_solver.optimize()
+    # witness = hyb_solver.feas_opt()
+    # witness = hyb_solver.optimize(verbose=True)
     print(witness)
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")

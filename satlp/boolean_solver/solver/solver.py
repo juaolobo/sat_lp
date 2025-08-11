@@ -269,13 +269,14 @@ class BooleanSolver:
             if lit not in self.graph.assigned_vars:
                 self.graph.add_node(lit, None, 0)
                 self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
+
                 if self.is_sat != 0:
                     # leave this here if it ever happens
                     print("SUPRISE MOTHERFUCKER", self.is_sat)
                     # self.conflict.print_info()
                     return
 
-    def expand_and_learn(self, witness, idx):
+    def _expand_and_learn(self, witness, idx):
         
         clause = self.formula.formula[idx]
         # current bug: fixed variables are not remaining fixed in later iterations
@@ -315,8 +316,9 @@ class BooleanSolver:
         self.restart()
         return new_clauses
 
-    def expand(self, witness, decision):
-
+    def expand_and_learn(self, witness, decision):
+        
+        self.restart()
         self.fix_variables(witness)
 
         self.decision_level += 1
@@ -326,11 +328,22 @@ class BooleanSolver:
         if self.is_sat == 0:
             self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
 
-        if self.is_sat == 0:
-            return self.graph.assigned_vars
+        # solve all conflicts generated
+        new_clauses = []
+        while self.is_sat == -1:
+            learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
+            # detected unsolvable conflict => UNSAT
+            if learnt_clause is None:
+                return None
 
-        else:
-            return None
+            new_clauses.append(tuple(learnt_clause.clause))
+            self.formula.add_clause(learnt_clause)
+            self.graph.backtrack(backtrack_level)
+            self.formula.backtrack(backtrack_level, self.graph)
+                
+            self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+
+        return new_clauses
 
 
 """
