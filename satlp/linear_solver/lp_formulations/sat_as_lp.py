@@ -198,7 +198,6 @@ class SATasLPOptimizationDual(SATasLP):
         self.fixing = fixing
         self.n_vars = cnf_handler.n_vars
         self.m_clauses = cnf_handler.m_clauses
-        self.opt_dim = self.n_vars
         self.c = None
 
     def _init_objects(self):

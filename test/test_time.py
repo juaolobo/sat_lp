@@ -1,4 +1,4 @@
-from satlp import HybridSolver, BooleanSolver, SATasLPFeasibility, SATasLPOptimization
+from satlp import HybridSolver, BooleanSolver, SATasLPOptimizationDual
 from tqdm import tqdm
 import csv
 import sys
@@ -49,20 +49,20 @@ def _worker(args):
 
     file, method = args
 
-    hyb_solver_feas = HybridSolver(file, SATasLPFeasibility, method=method)
+    hyb_solver_feas = HybridSolver(file, SATasLPOptimizationDual, method=method)
     hyb_start_feas = time()
-    hyb_witness_feas = hyb_solver_feas.solve()
+    hyb_witness_feas = hyb_solver_feas.optimize(generate_cut=hyb_solver_feas.generate_feas_cut)
     hyb_stop_feas = time()
 
-    hyb_solver_opt1 = HybridSolver(file, SATasLPOptimization, method=method)
-    hyb_start_opt1 = time()
-    hyb_witness_opt1 = hyb_solver_opt1.optimize1()
-    hyb_stop_opt1 = time()
+    hyb_solver_opt = HybridSolver(file, SATasLPOptimizationDual, method=method)
+    hyb_start_opt = time()
+    hyb_witness_opt = hyb_solver_opt.optimize(generate_cut=generate_cut_symm)
+    hyb_stop_opt = time()
 
-    hyb_solver_opt2 = HybridSolver(file, SATasLPOptimization, method=method)
-    hyb_start_opt2 = time()
-    hyb_witness_opt2 = hyb_solver_opt2.optimize2()
-    hyb_stop_opt2 = time()
+    hyb_solver_wp = HybridSolver(file, SATasLPOptimizationDual, method=method)
+    hyb_start_wp = time()
+    hyb_witness_wp = hyb_solver_wp.optimize(generate_cut=generate_cut_via_weak_projection)
+    hyb_stop_wp = time()
 
 
     sat_solver = BooleanSolver(file, verbose=0)
@@ -71,35 +71,36 @@ def _worker(args):
     bool_stop = time()
 
     ok_hyb_feas = hyb_solver_feas.verify(hyb_witness_feas)
-    ok_hyb_opt1 = hyb_solver_opt1.verify(hyb_witness_opt1)
-    ok_hyb_opt2 = hyb_solver_opt2.verify(hyb_witness_opt2)
+    ok_hyb_opt = hyb_solver_opt.verify(hyb_witness_opt)
+    ok_hyb_wp = hyb_solver_wp.verify(hyb_witness_wp)
     bool_witness = sat_solver.witness_to_linear(bool_witness)
     ok_bool = hyb_solver_feas.verify(bool_witness)
 
     hyb_witness_feas = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_feas)]
-    hyb_witness_opt1 = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt1)]
-    hyb_witness_opt2 = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt2)]
+    hyb_witness_opt = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt)]
+    hyb_witness_wp = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_wp)]
     bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)]
 
     elapsed_hyb_feas = hyb_stop_feas - hyb_start_feas
-    elapsed_hyb_opt1 = hyb_stop_opt1 - hyb_start_opt1
-    elapsed_hyb_opt2 = hyb_stop_opt2 - hyb_start_opt2
+    elapsed_hyb_opt = hyb_stop_opt - hyb_start_opt
+    elapsed_hyb_wp = hyb_stop_wp - hyb_start_wp
     elapsed_bool = bool_stop - bool_start
 
     n_learned_hyb_feas = hyb_solver_feas.cnf_handler.learnt_clauses
-    n_learned_hyb_opt1 = hyb_solver_opt1.cnf_handler.learnt_clauses
-    n_learned_hyb_opt2 = hyb_solver_opt2.cnf_handler.learnt_clauses
+    n_learned_hyb_opt = hyb_solver_opt.cnf_handler.learnt_clauses
+    n_learned_hyb_wp = hyb_solver_wp.cnf_handler.learnt_clauses
     n_learned_bool = sat_solver.nb_learnt_clause
 
     linear_it_feas = hyb_solver_feas.linear_it
-    linear_it_opt1 = hyb_solver_opt1.linear_it
-    linear_it_opt2 = hyb_solver_opt2.linear_it
-    boolean_it_feas = hyb_solver_feas.boolean_it
-    boolean_it_opt1 = hyb_solver_opt2.boolean_it
-    boolean_it_opt1 = hyb_solver_opt2.boolean_it
+    wp_it_feas = hyb_solver_feas.wp_it
+    linear_it_opt = hyb_solver_opt.linear_it
+    wp_it_opt = hyb_solver_opt.wp_it
+    linear_it_wp = hyb_solver_wp.linear_it
+    wp_it_wp = hyb_solver_wp.wp_it
+    boolean_it = bool_solver.nb_decisions
 
     name = file.split("/")[-1]
-    print(f"Elapsed time for our method: {elapsed_hyb_feas} (FEAS), {elapsed_hyb_opt1} (OPT), {elapsed_hyb_opt2} (OPT WITH FIXING); elapsed time for CDCL: {elapsed_bool}")
+    print(f"Elapsed time for our method: {elapsed_hyb_feas} (FEAS), {elapsed_hyb_opt} (OPT), {elapsed_hyb_wp} (OPT WITH FIXING); elapsed time for CDCL: {elapsed_bool}")
     print(f"Finished file {name}")
     print("-------------------------------------------------------")
 
@@ -107,23 +108,24 @@ def _worker(args):
     row = [
         name, 
         elapsed_hyb_feas, 
-        elapsed_hyb_opt1, 
-        elapsed_hyb_opt2, 
+        elapsed_hyb_opt, 
+        elapsed_hyb_wp, 
         elapsed_bool,
         n_learned_hyb_feas,
-        n_learned_hyb_opt1,
-        n_learned_hyb_opt2,
+        n_learned_hyb_opt,
+        n_learned_hyb_wp,
         n_learned_bool, 
         hyb_witness_feas,
-        hyb_witness_opt1,
-        hyb_witness_opt2,
+        hyb_witness_opt,
+        hyb_witness_wp,
         bool_witness,
         linear_it_feas,
-        linear_it_opt1,
-        linear_it_opt2,
-        boolean_it_feas,
-        boolean_it_opt1,
-        boolean_it_opt2
+        linear_it_opt,
+        linear_it_wp,
+        wp_it_feas,
+        wp_it_opt,
+        wp_it_wp,
+        bool_solver.nb_decisions
     ]
 
     return row
@@ -159,22 +161,22 @@ if __name__ == "__main__":
         columns = [
             'name', 
             'elapsed_hyb_feas', 
-            'elapsed_hyb_opt1', 
+            'elapsed_hyb_opt', 
             'elapsed_hyb_opt2', 
             'elapsed_bool',
             'n_learned_hyb_feas',
-            'n_learned_hyb_opt1',
+            'n_learned_hyb_opt',
             'n_learned_hyb_opt2',
             'n_learned_bool', 
             'hyb_witness_feas',
-            'hyb_witness_opt1',
+            'hyb_witness_opt',
             'hyb_witness_opt2',
             'bool_witness',
             'linear_it_feas',
-            'linear_it_opt1',
+            'linear_it_opt',
             'linear_it_opt2',
             'boolean_it_feas',
-            'boolean_it_opt1',
+            'boolean_it_opt',
             'boolean_it_opt2'
         ]
         writer.writerow(columns)

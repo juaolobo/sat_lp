@@ -20,6 +20,7 @@ class BooleanSolver:
         self.restart_rate = 100
         self.is_sat = 0 
         self.conflict = None
+        self.history = []
 
     def witness_to_linear(self, witness):
         witness = sorted(witness, key=abs)
@@ -116,6 +117,9 @@ class BooleanSolver:
             if self.is_sat == 1:
                 assert self.formula.get_value() == self.is_sat
                 break
+
+            if self.is_sat == -1:
+                self.history.append(self.graph.assigned_vars)
 
             while self.is_sat == -1 and not stop:
                 assert self.conflict is not None

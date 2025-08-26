@@ -15,17 +15,16 @@ class HybridSolver:
         lp_solver,
         method='highs-ipm',
         solutions='',
-        track_history=False
     ):
 
         self.fixing = {}
         self.cnf_handler = CNFLoader(filename)
         self.lp_solver = lp_solver(fixing=self.fixing, filename=filename, method=method, cnf_handler=self.cnf_handler)
         self.bool_solver = BooleanSolver(filename, verbose=0, cnf_handler=self.cnf_handler)
-        self.track_history = track_history
-        self.solution_history = []
+        self.history = []
         self.linear_it = 0
         self.boolean_it = 0
+        self.wp_it = 0
         
 
     def print_verbose(self, witness):
@@ -54,7 +53,7 @@ class HybridSolver:
 
         return min_err, min_sol, wrong_idxs
 
-    def solve_linear(self, switch=False, fixing={}, remove_from_opt=[]):
+    def solve_linear(self, switch=False, fixing={}, feas=False):
 
         self.lp_solver.fixing = fixing
         self.lp_solver.create_lp()
@@ -62,8 +61,10 @@ class HybridSolver:
         if switch == True:
             self.lp_solver.switch()
 
-        for i in remove_from_opt:
-            self.lp_solver.c[i] = 0
+        if feas:
+            n_vars = self.cnf_handler.n_vars
+            self.lp_solver.c = np.zeros(n_vars)
+
 
         return self.lp_solver.solve()
 
@@ -166,15 +167,15 @@ class HybridSolver:
         fixing_zero = {}
         print("------------------------------------------------------------------------------")
         conflicts = []
-        switch = True if np.random.uniform() > 0.5 else False
         while True:
 
             # MAX-0
             # solve opt for maximum number of zeros: min sum(z_i)
             # switch obj function back to MAX-0 and fix ones (and zeros) found in previous step
             print(f"RUNNING MAX-ZERO WITH FIXING_ONE: {fixing_one}")
-            witness_zero, res_zero = self.solve_linear(switch=~switch, fixing=fixing_one)
-
+            switch = True if np.random.uniform() > 0.5 else False
+            witness_zero, res_zero = self.solve_linear(switch=switch, fixing=fixing_one)
+            self.linear_it += 1
             # INFEASIBLE => UNSAT
             if witness_zero is None:
                 return None, None
@@ -189,7 +190,9 @@ class HybridSolver:
             # solve opt for maximum number of ones: min -sum(z_i)
             # switch obj function to MAX-1 and fix zeros found in previous step
             print(f"RUNNING MAX-ONE WITH FIXING_ZERO: {fixing_zero}")
-            witness_one, res_one = self.solve_linear(switch=switch, fixing=fixing_zero)
+            switch = True if np.random.uniform() > 0.5 else False
+            witness_one, res_one = self.solve_linear(switch=(switch), fixing=fixing_zero)
+            self.linear_it += 1
 
             # INFEASIBLE => UNSAT
             if witness_one is None:
@@ -205,15 +208,18 @@ class HybridSolver:
             if fixing_one == fixing_zero:
                 # check unsat via weak branching
                 witness, decision = self.weak_projection(current_fixing=fixing_zero)
+                self.wp_it += 1
                 fixing = self.extract_fixing(witness)
 
                 if abs(decision) not in fixing.keys():
                     
+                    conflicts.append((fixing, decision))
 
                     _witness, _decision = self.weak_projection(
                         current_fixing=fixing_zero, 
                         decision=-decision,
                     )
+                    self.wp_it += 1
                     _fixing = self.extract_fixing(_witness)
 
                     if len(_fixing) == n_vars:
@@ -221,7 +227,6 @@ class HybridSolver:
 
                     # UNSAT or conflict
                     if abs(_decision) not in _fixing.keys():
-                        conflicts.append((fixing, decision))
                         return _fixing, conflicts
 
                     fixing = _fixing
@@ -245,6 +250,7 @@ class HybridSolver:
         while True:
 
             _witness, _decision = self.weak_projection(current_fixing=fixing)
+            self.wp_it += 1
             _fixing = self.extract_fixing(_witness)
             print(f"TRIED WEAK BRANCHING ON COORDINATE {_decision}")
 
@@ -260,6 +266,7 @@ class HybridSolver:
                     current_fixing=_fixing, 
                     decision=-_decision
                 )
+                self.wp_it += 1
                 _fixing = self.extract_fixing(_witness)
 
                 print(f"TRIED WEAK BRANCHING ON COORDINATE {_decision}")
@@ -284,10 +291,13 @@ class HybridSolver:
         fixing = {}
         n_vars = self.cnf_handler.n_vars
         conflicts = []
+        print("------------------------------------------------------------------------------")
+
         while True:
 
             print(f"RUNNING FEASIBILITY WITH FIXING: {fixing}")
-            witness, res = self.solve_linear(fixing=fixing)
+            witness, res = self.solve_linear(fixing=fixing, feas=True)
+            self.linear_it += 1
             _fixing = self.extract_fixing(witness)
 
             if len(_fixing) == n_vars:
@@ -296,6 +306,7 @@ class HybridSolver:
 
             if fixing == _fixing:
                 _witness, _decision = self.weak_projection(current_fixing=_fixing)
+                self.wp_it += 1
                 _fixing = self.extract_fixing(_witness)
 
                 if len(_fixing) == n_vars:
@@ -303,12 +314,13 @@ class HybridSolver:
 
                 if abs(_decision) not in _fixing.keys():
                     
-
+                    conflicts.append((_fixing, _decision))
                     print(f"RUNNING WEAK BRANCHING ON COORDINATE {abs(_decision)} AND DIRECTION {-_decision}")
                     _witness, _decision = self.weak_projection(
                         current_fixing=_fixing, 
                         decision=-_decision
                     )
+                    self.wp_it += 1
 
                     _fixing = self.extract_fixing(_witness)
                     print(f"RESULT: {_fixing}")
@@ -318,19 +330,21 @@ class HybridSolver:
 
                     # UNSAT or conflict
                     if abs(_decision) not in _fixing.keys():
-                        conflicts.append((_fixing, _decision))
                         return _fixing, conflicts
 
             fixing = _fixing
 
         return fixing
 
-    def optimize(self, generate_cut):
+    def optimize(self, generate_cut, track_history=False):
 
         n_vars = self.cnf_handler.n_vars
         while True:
 
             cut, conflicts = generate_cut()
+            if track_history is True:
+                self.history.append(cut)
+
             print(cut, conflicts)
             # UNSAT
             if len(cut) == 0:
@@ -343,7 +357,6 @@ class HybridSolver:
 
             else:
                 # learn via conflict
-                print(conflicts)
                 for _cut, decision in conflicts:
 
                     learned = self.bool_solver.expand_and_learn(self.cut_to_witness(_cut), decision)
