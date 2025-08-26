@@ -56,12 +56,12 @@ def _worker(args):
 
     hyb_solver_opt = HybridSolver(file, SATasLPOptimizationDual, method=method)
     hyb_start_opt = time()
-    hyb_witness_opt = hyb_solver_opt.optimize(generate_cut=generate_cut_symm)
+    hyb_witness_opt = hyb_solver_opt.optimize(generate_cut=hyb_solver_opt.generate_cut_symm)
     hyb_stop_opt = time()
 
     hyb_solver_wp = HybridSolver(file, SATasLPOptimizationDual, method=method)
     hyb_start_wp = time()
-    hyb_witness_wp = hyb_solver_wp.optimize(generate_cut=generate_cut_via_weak_projection)
+    hyb_witness_wp = hyb_solver_wp.optimize(generate_cut=hyb_solver_wp.generate_cut_via_weak_projection)
     hyb_stop_wp = time()
 
 
@@ -97,10 +97,10 @@ def _worker(args):
     wp_it_opt = hyb_solver_opt.wp_it
     linear_it_wp = hyb_solver_wp.linear_it
     wp_it_wp = hyb_solver_wp.wp_it
-    boolean_it = bool_solver.nb_decisions
+    boolean_it = sat_solver.nb_decisions
 
     name = file.split("/")[-1]
-    print(f"Elapsed time for our method: {elapsed_hyb_feas} (FEAS), {elapsed_hyb_opt} (OPT), {elapsed_hyb_wp} (OPT WITH FIXING); elapsed time for CDCL: {elapsed_bool}")
+    print(f"Elapsed time for our method: {elapsed_hyb_feas} (FEAS), {elapsed_hyb_opt} (OPT), {elapsed_hyb_wp} (WEAK PROJECTION); elapsed time for CDCL: {elapsed_bool}")
     print(f"Finished file {name}")
     print("-------------------------------------------------------")
 
@@ -125,7 +125,7 @@ def _worker(args):
         wp_it_feas,
         wp_it_opt,
         wp_it_wp,
-        bool_solver.nb_decisions
+        boolean_it
     ]
 
     return row
@@ -151,6 +151,7 @@ if __name__ == "__main__":
     method = args.method
     
     files = [f"{files_dir}/{f}" for f in os.listdir(files_dir)]
+    files = np.random.choice(files, 100)
 
     worker_fn = _worker
     experiments_file = f"experiments/data/time/uf{n_vars}-{method}.csv"
