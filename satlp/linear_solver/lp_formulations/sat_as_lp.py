@@ -246,8 +246,8 @@ class SATasLPOptimizationDual(SATasLP):
     def switch(self):
         self.c = -self.c
 
-    def set_coefs_for_projection(self, decision, positive=True):
+    def set_coefs_for_projection(self, idx, direction=0):
         n_vars = self.cnf_handler.n_vars
         c = np.zeros(n_vars)
-        c[decision] = 1 if positive else -1
+        c[idx] = 1 if direction == 0 else -1
         self.c = c

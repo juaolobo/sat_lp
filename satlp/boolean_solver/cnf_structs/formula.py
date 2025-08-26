@@ -86,7 +86,6 @@ class Formula:
 
         return None, None
         
-
     def bcp(self, literal, decision_level, graph):
         conflict_clause = None
         for clause in self.formula:
@@ -111,6 +110,28 @@ class Formula:
 
         return self.value, conflict_clause
             
+    def bcp2(self, literal, decision_level, graph):
+        conflict_clauses = []
+        for clause in self.formula:
+            if clause.value == -1:
+                self.value = -1
+                conflict_clauses += [clause]
+
+            elif clause.value == 0:
+                # clause.print_info()
+                assert clause.size > 0
+                # Implication graph is used when the lazy clause is visited
+                if clause.bcp(literal, decision_level, graph) == -1:
+                    self.value = -1
+                    conflict_clauses += [clause]
+
+            elif clause.value == 1:
+                continue
+                
+        self.value = self.get_value()
+
+        return self.value, conflict_clauses
+
     def unit_propagate(self, decision_level, graph=None):
         nb_clauses = len(self.formula)
         i = 0
@@ -134,6 +155,33 @@ class Formula:
                 i += 1
 
         return self.value, conflict_clause
+
+    def unit_propagate2(self, decision_level, graph=None):
+        nb_clauses = len(self.formula)
+        i = 0
+        conflict_clauses = []
+        while i< nb_clauses and self.value == 0:
+            clause = self.formula[i]
+            if clause.is_unit():  
+
+                unit_literal = clause.clause[0]
+                if graph is not None and (unit_literal not in graph.assigned_vars):
+                    graph.add_node(unit_literal, clause, decision_level)
+
+                is_sat, _clauses = self.bcp2(unit_literal, decision_level, graph)
+                conflict_clauses += _clauses
+
+                if is_sat == -1:
+                    self.value == -1
+
+                else:
+                    self.value, _clauses = self.unit_propagate2(decision_level, graph) 
+                    conflict_clauses += _clauses
+            else: 
+                i += 1
+
+        return self.value, conflict_clauses
+
 
     def backtrack(self, backtrack_level, graph):
         for clause in self.formula:

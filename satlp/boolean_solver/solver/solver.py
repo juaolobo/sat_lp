@@ -56,16 +56,18 @@ class BooleanSolver:
 
         return w, w.get_backtrack_level()
     
-    def pick_branching_variable(self):
+    def pick_branching_variable(self, exclude=[]):
 
         ## Most frequent var first
         counter = {}
         for clause in self.formula.formula:
             for literal in clause.clause[:clause.size]:
-                if literal in counter:
-                    counter[literal] += 1
-                else:
-                    counter[literal] = 1 
+                if literal not in exclude and -literal not in exclude:
+                    if literal in counter:
+                        counter[literal] += 1
+                    else:
+                        counter[literal] = 1 
+
         assert len(counter) > 0
 
         pool_literal = list(counter.keys())
@@ -268,53 +270,6 @@ class BooleanSolver:
         for lit in linear_sol:
             if lit not in self.graph.assigned_vars:
                 self.graph.add_node(lit, None, 0)
-                self.is_sat, self.conflict = self.formula.bcp(lit, 0, self.graph)
-
-                if self.is_sat != 0:
-                    # leave this here if it ever happens
-                    print("SUPRISE MOTHERFUCKER", self.is_sat)
-                    # self.conflict.print_info()
-                    return
-
-    def _expand_and_learn(self, witness, idx):
-        
-        clause = self.formula.formula[idx]
-        # current bug: fixed variables are not remaining fixed in later iterations
-        self.fix_variables(witness)
-
-        # should break produce a conflict
-        new_clauses = []
-        decisions = self.pick_sat_var(clause)
-
-        for decision in decisions:
-            self.decision_level += 1
-
-            self.graph.add_node(decision, None, self.decision_level)
-            self.is_sat, self.conflict = self.formula.bcp(decision, self.decision_level, self.graph)
-
-            if self.is_sat == 0:
-                self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
-
-            # solve all conflicts generated
-            while self.is_sat == -1:
-                learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
-                # detected unsolvable conflict => UNSAT
-                if learnt_clause is None:
-                    breakpoint()
-                    return None
-
-                new_clauses.append(learnt_clause.clause)
-                self.formula.add_clause(learnt_clause)
-                self.graph.backtrack(backtrack_level)
-                self.formula.backtrack(backtrack_level, self.graph)
-                    
-                self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
-
-            self.restart()
-            self.fix_variables(witness)
-
-        self.restart()
-        return new_clauses
 
     def expand_and_learn(self, witness, decision):
         
@@ -330,8 +285,11 @@ class BooleanSolver:
 
         # solve all conflicts generated
         new_clauses = []
+
         while self.is_sat == -1:
+
             learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
+
             # detected unsolvable conflict => UNSAT
             if learnt_clause is None:
                 return None
@@ -345,6 +303,50 @@ class BooleanSolver:
 
         return new_clauses
 
+    def expand_and_learn2(self, witness, decision):
+        
+        self.restart()
+        self.fix_variables(witness)
+
+        self.decision_level = 1
+        self.graph.add_node(decision, None, self.decision_level)
+        self.is_sat, self.conflict = self.formula.bcp2(decision, self.decision_level, self.graph)
+
+        if self.is_sat == 0:
+            self.is_sat, self.conflict = self.formula.unit_propagate2(self.decision_level, self.graph)
+
+        # solve all conflicts generated
+        new_clauses = []
+
+        # resolve all generated conflicts
+        while len(self.conflict) > 0:
+
+            conflict = self.conflict.pop()
+            learnt_clause, _ = self.conflict_analysis(conflict)
+            self.formula.add_clause(learnt_clause)
+            # new_clauses.append(tuple(learnt_clause.clause))
+
+            # self.is_sat, self.conflict = self.formula.unit_propagate2(self.decision_level, self.graph)
+
+        # backtrack new decisions and propagate new clauses
+        self.graph.backtrack(0)
+        self.formula.backtrack(0, self.graph)
+        self.is_sat, self.conflict = self.formula.unit_propagate2(0, self.graph)
+
+        # resolve conflicts from propagation
+        if self.is_sat == -1:
+            while len(self.conflict) > 0:
+                print(self.conflict)
+                conflict = self.conflict.pop()
+                learnt_clause, _ = self.conflict_analysis(conflict)
+                self.formula.add_clause(learnt_clause)
+                new_clauses.append(tuple(learnt_clause.clause))
+                # self.is_sat, self.conflict = self.formula.unit_propagate2(0, self.graph)
+
+        self.restart()
+        print(new_clauses)
+
+        return new_clauses
 
 """
 -- outline of the algorithm

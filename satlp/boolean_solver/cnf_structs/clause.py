@@ -206,6 +206,7 @@ class Clause:
                     res = []
                     dl = []
                     break
+                    
                 elif l in res:
                     continue
 
