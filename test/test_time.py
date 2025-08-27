@@ -44,7 +44,7 @@ def create_parser():
 
     parser.add_argument(
         "-nf", 
-        "--n_formula", 
+        "--n_formulas", 
         type=int, 
         default=100, 
     )
