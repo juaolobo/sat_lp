@@ -42,6 +42,14 @@ def create_parser():
         help="If --run_in_parallel is active and n_processes=None, the program will use all available logical CPUs. Default is set to 'None'."
     )
 
+    parser.add_argument(
+        "-nf", 
+        "--n_formula", 
+        type=int, 
+        default=100, 
+    )
+
+
     return parser
 
 def _worker(args):
@@ -117,8 +125,10 @@ if __name__ == "__main__":
 
     files_dir = args.dir if args.dir[-1] != '/' else args.dir[:-1]
 
+    n_formulas = args.n_formulas
+    
     files = [f"{files_dir}/{f}" for f in os.listdir(files_dir)]
-    files = np.random.choice(files, 100)
+    files = np.random.choice(files, n_formulas)
 
     worker_fn = _worker
     experiments_file = f"experiments/data/time/uf{n_vars}-{method}.csv"

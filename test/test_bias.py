@@ -50,6 +50,12 @@ def create_parser():
         help="-s [bool | feas | opt | weak_projection]."
     )
 
+    parser.add_argument(
+        "-nf", 
+        "--n_formula", 
+        type=int, 
+        default=100, 
+    )
 
     return parser
 
@@ -120,7 +126,10 @@ if __name__ == "__main__":
         solver_class = BooleanSolver
         generate_cut = None
 
-    files = [f"{files_dir}/{f}" for f in os.listdir(files_dir)][:4]
+    n_formulas = args.n_formulas
+    
+    files = [f"{files_dir}/{f}" for f in os.listdir(files_dir)]
+    files = np.random.choice(files, n_formulas)
 
     worker_fn = _worker
     experiments_file = f"experiments/data/time/uf{n_vars}-{method}.csv"

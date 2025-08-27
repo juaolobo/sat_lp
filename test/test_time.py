@@ -42,6 +42,13 @@ def create_parser():
         help="If --run_in_parallel is active and n_processes=None, the program will use all available logical CPUs. Default is set to 'None'."
     )
 
+    parser.add_argument(
+        "-nf", 
+        "--n_formula", 
+        type=int, 
+        default=100, 
+    )
+
 
     return parser
 
@@ -149,9 +156,10 @@ if __name__ == "__main__":
 
     files_dir = args.dir if args.dir[-1] != '/' else args.dir[:-1]
     method = args.method
+    n_formulas = args.n_formulas
     
     files = [f"{files_dir}/{f}" for f in os.listdir(files_dir)]
-    files = np.random.choice(files, 100)
+    files = np.random.choice(files, n_formulas)
 
     worker_fn = _worker
     experiments_file = f"experiments/data/time/uf{n_vars}-{method}.csv"
@@ -163,22 +171,23 @@ if __name__ == "__main__":
             'name', 
             'elapsed_hyb_feas', 
             'elapsed_hyb_opt', 
-            'elapsed_hyb_opt2', 
+            'elapsed_hyb_wp', 
             'elapsed_bool',
             'n_learned_hyb_feas',
             'n_learned_hyb_opt',
-            'n_learned_hyb_opt2',
+            'n_learned_hyb_wp',
             'n_learned_bool', 
             'hyb_witness_feas',
             'hyb_witness_opt',
-            'hyb_witness_opt2',
+            'hyb_witness_wp',
             'bool_witness',
             'linear_it_feas',
             'linear_it_opt',
-            'linear_it_opt2',
-            'boolean_it_feas',
-            'boolean_it_opt',
-            'boolean_it_opt2'
+            'linear_it_wp',
+            'wp_it_feas',
+            'wp_it_opt',
+            'wp_it_wp',
+            'boolean_it'
         ]
         writer.writerow(columns)
 
