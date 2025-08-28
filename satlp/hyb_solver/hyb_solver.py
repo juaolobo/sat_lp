@@ -16,7 +16,7 @@ class HybridSolver:
         method='highs-ipm',
         solutions='',
     ):
-
+        self.filename = filename
         self.fixing = {}
         self.cnf_handler = CNFLoader(filename)
         self.lp_solver = lp_solver(fixing=self.fixing, filename=filename, method=method, cnf_handler=self.cnf_handler)
@@ -240,11 +240,12 @@ class HybridSolver:
         fixing = self.extract_fixing(witness)
         return fixing, []
 
-    def generate_cut_via_weak_projection(self, verbose=False, cut_greedy=False):
+    def generate_cut_via_weak_projection(self, verbose=False, init_fixing={}):
 
         n_vars = self.cnf_handler.n_vars
-        fixing = {}
+        fixing = init_fixing
         print("------------------------------------------------------------------------------")
+        print(f"BOOTSTRAPING WITH {init_fixing}")
         conflicts = []
         # np.random.seed(41)
         while True:
@@ -261,6 +262,7 @@ class HybridSolver:
 
             if abs(_decision) not in _fixing.keys():
 
+                conflicts.append((_fixing,_decision))
 
                 _witness, _decision = self.weak_projection(
                     current_fixing=_fixing, 
@@ -277,7 +279,6 @@ class HybridSolver:
                     return _fixing, []
                 # UNSAT or conflict
                 if abs(_decision) not in _fixing.keys():
-                    conflicts.append((_fixing,_decision))
                     return _fixing, conflicts
 
             fixing = _fixing
@@ -305,9 +306,9 @@ class HybridSolver:
                 
 
             if fixing == _fixing:
-                _witness, _decision = self.weak_projection(current_fixing=_fixing)
+                _witness1, _decision = self.weak_projection(current_fixing=_fixing)
                 self.wp_it += 1
-                _fixing = self.extract_fixing(_witness)
+                _fixing = self.extract_fixing(_witness1)
 
                 if len(_fixing) == n_vars:
                     return _fixing, []
@@ -315,6 +316,7 @@ class HybridSolver:
                 if abs(_decision) not in _fixing.keys():
                     
                     conflicts.append((_fixing, _decision))
+
                     print(f"RUNNING WEAK BRANCHING ON COORDINATE {abs(_decision)} AND DIRECTION {-_decision}")
                     _witness, _decision = self.weak_projection(
                         current_fixing=_fixing, 
@@ -330,6 +332,7 @@ class HybridSolver:
 
                     # UNSAT or conflict
                     if abs(_decision) not in _fixing.keys():
+
                         return _fixing, conflicts
 
             fixing = _fixing
@@ -339,13 +342,13 @@ class HybridSolver:
     def optimize(self, generate_cut, track_history=False):
 
         n_vars = self.cnf_handler.n_vars
+        fixing = {}
         while True:
 
             cut, conflicts = generate_cut()
             if track_history is True:
                 self.history.append(cut)
 
-            print(cut, conflicts)
             # UNSAT
             if len(cut) == 0:
                 return None
@@ -360,7 +363,14 @@ class HybridSolver:
                 for _cut, decision in conflicts:
 
                     learned = self.bool_solver.expand_and_learn(self.cut_to_witness(_cut), decision)
-                    print(learned)
+                    if len(learned) == 0:
+                        with open("debug.log", "a") as db:
+                            db.write(self.filename)
+                            db.write('\n')
+                            db.write(str(self.cnf_handler.clauses))
+                            db.write('\n')
+                            db.write(str(conflicts))
+                        breakpoint()
                     # UNSAT
                     if learned is None:
                         return None
@@ -368,7 +378,7 @@ class HybridSolver:
                     for c in learned:
                         self.cnf_handler.add_clause(c)
                         self.cnf_handler.learnt_clauses += 1
-
+                    
 
     def cut_to_linear(self, cut):
         n_vars = self.cnf_handler.n_vars
@@ -386,12 +396,15 @@ class HybridSolver:
         witness = [xi if cut[xi] == 1 else -xi for xi in cut.keys()]
         return witness
 
+    def is_boolean(self, x, eps=1e-8):
+        return np.abs(x) < eps or np.abs(1-x) < eps
+
     def extract_fixing(self, witness):
         n_vars = self.cnf_handler.n_vars
         fixing = {
-            i+1: witness[i].item()
+            i+1: round(witness[i].item())
             for i in range(n_vars) 
-            if witness[i].is_integer()
+            if self.is_boolean(witness[i])
         }
 
         return fixing
