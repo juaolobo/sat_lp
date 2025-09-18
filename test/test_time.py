@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     n_processes = args.n_processes
     if not n_processes:
-        n_processes = os.cpu_count()
+        n_processes = os.cpu_count()/2
 
     n_vars = args.n_vars
 

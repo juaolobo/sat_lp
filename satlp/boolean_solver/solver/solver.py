@@ -289,7 +289,7 @@ class BooleanSolver:
 
         # solve all conflicts generated
         new_clauses = []
-
+        was_sat = (self.is_sat, 2)
         while self.is_sat == -1:
 
             learnt_clause, backtrack_level = self.conflict_analysis(self.conflict)
@@ -302,8 +302,14 @@ class BooleanSolver:
             self.formula.add_clause(learnt_clause)
             self.graph.backtrack(backtrack_level)
             self.formula.backtrack(backtrack_level, self.graph)
-                
+            
+            print(self.formula.formula[-1].print_info())
+            
             self.is_sat, self.conflict = self.formula.unit_propagate(self.decision_level, self.graph)
+
+        
+        if len(new_clauses) == 0:
+            breakpoint()
 
         return new_clauses
 

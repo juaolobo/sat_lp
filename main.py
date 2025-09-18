@@ -53,8 +53,8 @@ if __name__ == "__main__":
     # lp_solver =  SATasLPFeasibility
 
     start = time.time()
-    # hyb_solver = HybridSolver(filename, lp_solver, method=method)
-    # witness = hyb_solver.optimize(generate_cut=hyb_solver.generate_feas_cut)
+    hyb_solver = HybridSolver(filename, lp_solver, method=method)
+    witness = hyb_solver.optimize(generate_cut=hyb_solver.generate_feas_cut)
     stop = time.time()
     print(f"Elapsed time: {stop - start}s")
     hyb_solver.verify(witness)

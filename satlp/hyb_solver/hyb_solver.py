@@ -363,14 +363,7 @@ class HybridSolver:
                 for _cut, decision in conflicts:
 
                     learned = self.bool_solver.expand_and_learn(self.cut_to_witness(_cut), decision)
-                    if len(learned) == 0:
-                        with open("debug.log", "a") as db:
-                            db.write(self.filename)
-                            db.write('\n')
-                            db.write(str(self.cnf_handler.clauses))
-                            db.write('\n')
-                            db.write(str(conflicts))
-                        breakpoint()
+
                     # UNSAT
                     if learned is None:
                         return None
@@ -396,7 +389,7 @@ class HybridSolver:
         witness = [xi if cut[xi] == 1 else -xi for xi in cut.keys()]
         return witness
 
-    def is_boolean(self, x, eps=1e-8):
+    def is_boolean(self, x, eps=1e-4):
         return np.abs(x) < eps or np.abs(1-x) < eps
 
     def extract_fixing(self, witness):
