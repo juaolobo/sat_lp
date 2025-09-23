@@ -66,12 +66,12 @@ def _worker(args):
 
     ok_hyb_feas = hyb_solver_feas.verify(hyb_witness_feas)
     ok_hyb_opt = hyb_solver_opt.verify(hyb_witness_opt)
-    bool_witness = sat_solver.witness_to_linear(bool_witness)
+    bool_witness = sat_solver.witness_to_linear(bool_witness) if bool_witness is not None else bool_witness
     ok_bool = hyb_solver_feas.verify(bool_witness)
 
-    hyb_witness_feas = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_feas)]
-    hyb_witness_opt = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt)]
-    bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)]
+    hyb_witness_feas = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_feas)] if hyb_witness_feas is not None else None
+    hyb_witness_opt = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(hyb_witness_opt)] if hyb_witness_opt is not None else None
+    bool_witness = [i+1 if xi == 1 else -i-1 if xi == 0 else -1 for i, xi in enumerate(bool_witness)] if bool_witness is not None else None
 
     elapsed_hyb_feas = hyb_stop_feas - hyb_start_feas
     elapsed_hyb_opt = hyb_stop_opt - hyb_start_opt
